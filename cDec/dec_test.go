@@ -2,6 +2,7 @@ package cDec
 
 import (
 	"encoding/json"
+	"github.com/shopspring/decimal"
 	"math/big"
 	"testing"
 
@@ -301,4 +302,14 @@ func TestNumFractionalDigits(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestPow(t *testing.T) {
+	a := decimal.New(4, 0)
+	b := decimal.New(5, -1)
+	x := a.Pow(b)
+	if x.String() != "2" {
+		t.Errorf("Error, saw %s", x.String())
+	}
+
 }
