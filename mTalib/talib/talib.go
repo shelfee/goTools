@@ -106,7 +106,7 @@ func ema(inReal []zDec.Number, inTimePeriod int, k1 float64) []zDec.Number {
 	startIdx := lookbackTotal
 	today := startIdx - lookbackTotal
 	i := inTimePeriod
-	tempReal := zDec.NewDynNumFromFloat64(0)
+	tempReal := zDec.Float64(0)
 	for i > 0 {
 		tempReal.Add(inReal[today])
 		today++
@@ -375,55 +375,56 @@ func HtTrendline(inReal []float64) []float64 {
 }
 
 // Kama - Kaufman Adaptive Moving Average
-func Kama(inReal []float64, inTimePeriod int) []float64 {
-	outReal := make([]float64, len(inReal))
+func Kama(inReal []zDec.Number, inTimePeriod int) []zDec.Number {
+	outReal := make([]zDec.Number, len(inReal))
 
-	constMax := 2.0 / (30.0 + 1.0)
+	constMax := zDec.Float64(2.0 / (30.0 + 1.0))
 	constDiff := 2.0/(2.0+1.0) - constMax
 	lookbackTotal := inTimePeriod
 	startIdx := lookbackTotal
-	sumROC1 := 0.0
+	var sumROC1 zDec.Number = zDec.Float64(0.0)
 	today := startIdx - lookbackTotal
 	trailingIdx := today
 	i := inTimePeriod
 	for i > 0 {
 		tempReal := inReal[today]
 		today++
-		tempReal -= inReal[today]
-		sumROC1 += math.Abs(tempReal)
+		tempReal = tempReal.Sub(inReal[today])
+		sumROC1 = sumROC1.Add(tempReal.Abs())
 		i--
 	}
 	prevKAMA := inReal[today-1]
 	tempReal := inReal[today]
 	tempReal2 := inReal[trailingIdx]
 	trailingIdx++
-	periodROC := tempReal - tempReal2
+	periodROC := tempReal.Sub(tempReal2)
 	trailingValue := tempReal2
-	if (sumROC1 <= periodROC) || (((-(0.00000000000001)) < sumROC1) && (sumROC1 < (0.00000000000001))) {
-		tempReal = 1.0
+	if (sumROC1.Cmp(periodROC) <= 0) || (zDec.Float64(-0.00000000000001).Cmp(sumROC1) < 0 && sumROC1.Cmp(zDec.Float64(0.00000000000001)) < 0) {
+		tempReal = zDec.Float64(1.0)
 	} else {
-		tempReal = math.Abs(periodROC / sumROC1)
+		tempReal = periodROC.Div(sumROC1).Abs()
 	}
-	tempReal = (tempReal * constDiff) + constMax
-	tempReal *= tempReal
-	prevKAMA = ((inReal[today] - prevKAMA) * tempReal) + prevKAMA
+	tempReal = tempReal.Mul(constDiff).Add(constMax)
+	tempReal = tempReal.Add(tempReal)
+	prevKAMA = inReal[today].Sub(prevKAMA).Mul(tempReal).Add(prevKAMA)
 	today++
 	for today <= startIdx {
 		tempReal = inReal[today]
 		tempReal2 = inReal[trailingIdx]
 		trailingIdx++
-		periodROC = tempReal - tempReal2
-		sumROC1 -= math.Abs(trailingValue - tempReal2)
-		sumROC1 += math.Abs(tempReal - inReal[today-1])
+		periodROC = tempReal.Sub(tempReal2)
+		sumROC1 = sumROC1.Sub(trailingValue.Sub(tempReal2).Abs())
+		sumROC1 = sumROC1.Add((tempReal.Sub(inReal[today-1]).Abs()))
 		trailingValue = tempReal2
-		if (sumROC1 <= periodROC) || (((-(0.00000000000001)) < sumROC1) && (sumROC1 < (0.00000000000001))) {
-			tempReal = 1.0
+		if (sumROC1.Cmp(periodROC) <= 0) || (zDec.Float64(-0.00000000000001).Cmp(sumROC1) < 0 && sumROC1.Cmp(zDec.Float64(0.00000000000001)) < 0) {
+			tempReal = zDec.Float64(1.0)
 		} else {
-			tempReal = math.Abs(periodROC / sumROC1)
+			tempReal = periodROC.Div(sumROC1).Abs()
 		}
-		tempReal = (tempReal * constDiff) + constMax
-		tempReal *= tempReal
-		prevKAMA = ((inReal[today] - prevKAMA) * tempReal) + prevKAMA
+		tempReal = tempReal.Mul(constDiff).Add(constMax)
+		tempReal = tempReal.Mul(tempReal)
+
+		prevKAMA = inReal[today].Sub(prevKAMA).Mul(tempReal).Add(prevKAMA)
 		today++
 	}
 	outReal[inTimePeriod] = prevKAMA
@@ -432,23 +433,22 @@ func Kama(inReal []float64, inTimePeriod int) []float64 {
 		tempReal = inReal[today]
 		tempReal2 = inReal[trailingIdx]
 		trailingIdx++
-		periodROC = tempReal - tempReal2
-		sumROC1 -= math.Abs(trailingValue - tempReal2)
-		sumROC1 += math.Abs(tempReal - inReal[today-1])
+		periodROC = tempReal.Sub(tempReal2)
+		sumROC1 = sumROC1.Sub(trailingValue.Sub(tempReal2).Abs())
+		sumROC1 = sumROC1.Add(tempReal.Sub(inReal[today-1]).Abs())
 		trailingValue = tempReal2
-		if (sumROC1 <= periodROC) || (((-(0.00000000000001)) < sumROC1) && (sumROC1 < (0.00000000000001))) {
-			tempReal = 1.0
+		if (sumROC1.Cmp(periodROC) <= 0) || (zDec.Float64(-0.00000000000001).Cmp(sumROC1) < 0 && sumROC1.Cmp(zDec.Float64(0.00000000000001)) < 0) {
+			tempReal = zDec.Float64(1.0)
 		} else {
-			tempReal = math.Abs(periodROC / sumROC1)
+			tempReal = periodROC.Div(sumROC1).Abs()
 		}
-		tempReal = (tempReal * constDiff) + constMax
-		tempReal *= tempReal
-		prevKAMA = ((inReal[today] - prevKAMA) * tempReal) + prevKAMA
+		tempReal = tempReal.Mul(constDiff).Add(constMax)
+		tempReal = tempReal.Mul(tempReal)
+		prevKAMA = inReal[today].Sub(prevKAMA).Mul(tempReal).Add(prevKAMA)
 		today++
 		outReal[outIdx] = prevKAMA
 		outIdx++
 	}
-
 	return outReal
 }
 
@@ -485,21 +485,21 @@ func Ma(inReal []zDec.Number, inTimePeriod int, inMAType MaType) []zDec.Number {
 }
 
 // Mama - MESA Adaptive Moving Average (lookback=32)
-func Mama(inReal []float64, inFastLimit float64, inSlowLimit float64) ([]float64, []float64) {
-	outMAMA := make([]float64, len(inReal))
-	outFAMA := make([]float64, len(inReal))
+func Mama(inReal []zDec.Number, inFastLimit float64, inSlowLimit float64) ([]zDec.Number, []zDec.Number) {
+	outMAMA := make([]zDec.Number, len(inReal))
+	outFAMA := make([]zDec.Number, len(inReal))
 
 	a := 0.0962
 	b := 0.5769
-	detrenderOdd := make([]float64, 3)
-	detrenderEven := make([]float64, 3)
-	q1Odd := make([]float64, 3)
-	q1Even := make([]float64, 3)
-	jIOdd := make([]float64, 3)
-	jIEven := make([]float64, 3)
-	jQOdd := make([]float64, 3)
-	jQEven := make([]float64, 3)
-	rad2Deg := 180.0 / (4.0 * math.Atan(1))
+	detrenderOdd := make([]zDec.Number, 3)
+	detrenderEven := make([]zDec.Number, 3)
+	q1Odd := make([]zDec.Number, 3)
+	q1Even := make([]zDec.Number, 3)
+	jIOdd := make([]zDec.Number, 3)
+	jIEven := make([]zDec.Number, 3)
+	jQOdd := make([]zDec.Number, 3)
+	jQEven := make([]zDec.Number, 3)
+	rad2Deg := zDec.Float64(180.0 / (4.0 * math.Atan(1)))
 	lookbackTotal := 32
 	startIdx := lookbackTotal
 	trailingWMAIdx := startIdx - lookbackTotal
@@ -510,258 +510,282 @@ func Mama(inReal []float64, inFastLimit float64, inSlowLimit float64) ([]float64
 	periodWMASum := tempReal
 	tempReal = inReal[today]
 	today++
-	periodWMASub += tempReal
-	periodWMASum += tempReal * 2.0
+	periodWMASub = periodWMASub.Add(tempReal)
+	periodWMASum = periodWMASum.Add(tempReal.Mul(zDec.Float64(2.0)))
 	tempReal = inReal[today]
 	today++
-	periodWMASub += tempReal
-	periodWMASum += tempReal * 3.0
-	trailingWMAValue := 0.0
+	periodWMASub = periodWMASub.Add(tempReal)
+	periodWMASum = periodWMASum.Add(tempReal.Mul(zDec.Float64(3.0)))
+	var trailingWMAValue zDec.Number = zDec.Float64(0.0)
 	i := 9
-	smoothedValue := 0.0
+	var smoothedValue zDec.Number = zDec.Float64(0.0)
 	for ok := true; ok; {
 		tempReal = inReal[today]
 		today++
-		periodWMASub += tempReal
-		periodWMASub -= trailingWMAValue
-		periodWMASum += tempReal * 4.0
+		periodWMASub = periodWMASub.Add(tempReal)
+		periodWMASub = periodWMASub.Sub(trailingWMAValue)
+		periodWMASub = periodWMASub.Sub(tempReal.Mul(zDec.Float64(4)))
 		trailingWMAValue = inReal[trailingWMAIdx]
 		trailingWMAIdx++
-		smoothedValue = periodWMASum * 0.1
-		periodWMASum -= periodWMASub
+		smoothedValue = periodWMASum.Mul(zDec.Float64(0.1))
+		periodWMASum = periodWMASum.Sub(periodWMASub)
 		i--
 		ok = i != 0
 	}
 	hilbertIdx := 0
-	detrenderOdd[0] = 0.0
-	detrenderOdd[1] = 0.0
-	detrenderOdd[2] = 0.0
-	detrenderEven[0] = 0.0
-	detrenderEven[1] = 0.0
-	detrenderEven[2] = 0.0
-	detrender := 0.0
-	prevDetrenderOdd := 0.0
-	prevDetrenderEven := 0.0
-	prevDetrenderInputOdd := 0.0
-	prevDetrenderInputEven := 0.0
+	detrenderOdd[0] = zDec.Float64(0.0)
+	detrenderOdd[1] = zDec.Float64(0.0)
+	detrenderOdd[2] = zDec.Float64(0.0)
+	detrenderEven[0] = zDec.Float64(0.0)
+	detrenderEven[1] = zDec.Float64(0.0)
+	detrenderEven[2] = zDec.Float64(0.0)
+	var detrender zDec.Number = zDec.Float64(0.0)
+	var prevDetrenderOdd zDec.Number = zDec.Float64(0.0)
+	var prevDetrenderEven zDec.Number = zDec.Float64(0.0)
+	var prevDetrenderInputOdd zDec.Number = zDec.Float64(0.0)
+	var prevDetrenderInputEven zDec.Number = zDec.Float64(0.0)
 
-	q1Odd[0] = 0.0
-	q1Odd[1] = 0.0
-	q1Odd[2] = 0.0
-	q1Even[0] = 0.0
-	q1Even[1] = 0.0
-	q1Even[2] = 0.0
-	q1 := 0.0
-	prevq1Odd := 0.0
-	prevq1Even := 0.0
-	prevq1InputOdd := 0.0
-	prevq1InputEven := 0.0
+	q1Odd[0] = zDec.Float64(0.0)
+	q1Odd[1] = zDec.Float64(0.0)
+	q1Odd[2] = zDec.Float64(0.0)
+	q1Even[0] = zDec.Float64(0.0)
+	q1Even[1] = zDec.Float64(0.0)
+	q1Even[2] = zDec.Float64(0.0)
+	var q1 zDec.Number = zDec.Float64(0.0)
+	var prevq1Odd zDec.Number = zDec.Float64(0.0)
+	var prevq1Even zDec.Number = zDec.Float64(0.0)
+	var prevq1InputOdd zDec.Number = zDec.Float64(0.0)
+	var prevq1InputEven zDec.Number = zDec.Float64(0.0)
 
-	jIOdd[0] = 0.0
-	jIOdd[1] = 0.0
-	jIOdd[2] = 0.0
-	jIEven[0] = 0.0
-	jIEven[1] = 0.0
-	jIEven[2] = 0.0
-	jI := 0.0
-	prevjIOdd := 0.0
-	prevjIEven := 0.0
-	prevjIInputOdd := 0.0
-	prevjIInputEven := 0.0
+	jIOdd[0] = zDec.Float64(0.0)
+	jIOdd[1] = zDec.Float64(0.0)
+	jIOdd[2] = zDec.Float64(0.0)
+	jIEven[0] = zDec.Float64(0.0)
+	jIEven[1] = zDec.Float64(0.0)
+	jIEven[2] = zDec.Float64(0.0)
+	var jI zDec.Number = zDec.Float64(0.0)
+	var prevjIOdd zDec.Number = zDec.Float64(0.0)
+	var prevjIEven zDec.Number = zDec.Float64(0.0)
+	var prevjIInputOdd zDec.Number = zDec.Float64(0.0)
+	var prevjIInputEven zDec.Number = zDec.Float64(0.0)
 
-	jQOdd[0] = 0.0
-	jQOdd[1] = 0.0
-	jQOdd[2] = 0.0
-	jQEven[0] = 0.0
-	jQEven[1] = 0.0
-	jQEven[2] = 0.0
-	jQ := 0.0
-	prevjQOdd := 0.0
-	prevjQEven := 0.0
-	prevjQInputOdd := 0.0
-	prevjQInputEven := 0.0
+	jQOdd[0] = zDec.Float64(0.0)
+	jQOdd[1] = zDec.Float64(0.0)
+	jQOdd[2] = zDec.Float64(0.0)
+	jQEven[0] = zDec.Float64(0.0)
+	jQEven[1] = zDec.Float64(0.0)
+	jQEven[2] = zDec.Float64(0.0)
+	var jQ zDec.Number = zDec.Float64(0.0)
+	var prevjQOdd zDec.Number = zDec.Float64(0.0)
+	var prevjQEven zDec.Number = zDec.Float64(0.0)
+	var prevjQInputOdd zDec.Number = zDec.Float64(0.0)
+	var prevjQInputEven zDec.Number = zDec.Float64(0.0)
 
-	period := 0.0
+	var period zDec.Number = zDec.Float64(0.0)
+	var previ2 zDec.Number = zDec.Float64(0.0)
+	var prevq2 zDec.Number = zDec.Float64(0.0)
+	var Re zDec.Number = zDec.Float64(0.0)
+	var Im zDec.Number = zDec.Float64(0.0)
+	var mama zDec.Number = zDec.Float64(0.0)
+	var fama zDec.Number = zDec.Float64(0.0)
+	var i1ForOddPrev3 zDec.Number = zDec.Float64(0.0)
+	var i1ForEvenPrev3 zDec.Number = zDec.Float64(0.0)
+	var i1ForOddPrev2 zDec.Number = zDec.Float64(0.0)
+	var i1ForEvenPrev2 zDec.Number = zDec.Float64(0.0)
+	var prevPhase zDec.Number = zDec.Float64(0.0)
+	var adjustedPrevPeriod zDec.Number = zDec.Float64(0.0)
+	var todayValue zDec.Number = zDec.Float64(0.0)
+	var hilbertTempReal zDec.Number = zDec.Float64(0.0)
+
 	outIdx := startIdx
-	previ2, prevq2 := 0.0, 0.0
-	Re, Im := 0.0, 0.0
-	mama, fama := 0.0, 0.0
-	i1ForOddPrev3, i1ForEvenPrev3 := 0.0, 0.0
-	i1ForOddPrev2, i1ForEvenPrev2 := 0.0, 0.0
-	prevPhase := 0.0
-	adjustedPrevPeriod := 0.0
-	todayValue := 0.0
-	hilbertTempReal := 0.0
-	for today < len(inReal) {
-		adjustedPrevPeriod = (0.075 * period) + 0.54
-		todayValue = inReal[today]
 
-		periodWMASub += todayValue
-		periodWMASub -= trailingWMAValue
-		periodWMASum += todayValue * 4.0
+	for today < len(inReal) {
+		adjustedPrevPeriod = period.Mul(zDec.Float64(0.075)).Add(zDec.Float64(0.54))
+		todayValue = inReal[today]
+		periodWMASub = periodWMASub.Add(todayValue)
+		periodWMASub = periodWMASub.Sub(trailingWMAValue)
+		periodWMASum = periodWMASum.Add(todayValue.Mul(zDec.Float64(4.0)))
 		trailingWMAValue = inReal[trailingWMAIdx]
 		trailingWMAIdx++
-		smoothedValue = periodWMASum * 0.1
-		periodWMASum -= periodWMASub
-		q2, i2 := 0.0, 0.0
-		tempReal2 := 0.0
+		smoothedValue = periodWMASum.Mul(zDec.Float64(0.1))
+		periodWMASum = smoothedValue.Sub(periodWMASub)
+		var q2, i2 zDec.Number = zDec.Float64(0.0), zDec.Float64(0.0)
+		var tempReal2 zDec.Number
 		if (today % 2) == 0 {
-
-			hilbertTempReal = a * smoothedValue
-			detrender = -detrenderEven[hilbertIdx]
+			hilbertTempReal = smoothedValue.Mul(zDec.Float64(a))
+			detrender = detrenderEven[hilbertIdx].Neg()
 			detrenderEven[hilbertIdx] = hilbertTempReal
-			detrender += hilbertTempReal
-			detrender -= prevDetrenderEven
-			prevDetrenderEven = b * prevDetrenderInputEven
-			detrender += prevDetrenderEven
+			detrender = detrender.Add(hilbertTempReal)
+			detrender = detrender.Sub(prevDetrenderEven)
+			prevDetrenderEven = prevDetrenderInputEven.Mul(zDec.Float64(b))
+			detrender = detrender.Add(prevDetrenderEven)
 			prevDetrenderInputEven = smoothedValue
-			detrender *= adjustedPrevPeriod
+			detrender = detrender.Mul(adjustedPrevPeriod)
 
-			hilbertTempReal = a * detrender
-			q1 = -q1Even[hilbertIdx]
+			hilbertTempReal = detrender.Mul(zDec.Float64(a))
+			q1 = q1Even[hilbertIdx].Neg()
 			q1Even[hilbertIdx] = hilbertTempReal
-			q1 += hilbertTempReal
-			q1 -= prevq1Even
-			prevq1Even = b * prevq1InputEven
-			q1 += prevq1Even
+			q1 = q1.Add(hilbertTempReal)
+			q1 = q1.Sub(prevq1Even)
+			prevq1Even = prevq1InputEven.Mul(zDec.Float64(b))
+			q1 = q1.Add(prevq1Even)
 			prevq1InputEven = detrender
-			q1 *= adjustedPrevPeriod
+			q1 = q1.Mul(adjustedPrevPeriod)
 
-			hilbertTempReal = a * i1ForEvenPrev3
-			jI = -jIEven[hilbertIdx]
+			hilbertTempReal = i1ForEvenPrev3.Mul(zDec.Float64(a))
+			jI = jIEven[hilbertIdx].Neg()
 			jIEven[hilbertIdx] = hilbertTempReal
-			jI += hilbertTempReal
-			jI -= prevjIEven
-			prevjIEven = b * prevjIInputEven
-			jI += prevjIEven
+			jI = jI.Add(hilbertTempReal)
+			jI = jI.Sub(prevjIEven)
+			prevjIEven = prevjIInputEven.Mul(zDec.Float64(b))
+			jI = jI.Add(prevjIEven)
 			prevjIInputEven = i1ForEvenPrev3
-			jI *= adjustedPrevPeriod
+			jI = jI.Mul(adjustedPrevPeriod)
 
-			hilbertTempReal = a * q1
-			jQ = -jQEven[hilbertIdx]
+			hilbertTempReal = q1.Mul(zDec.Float64(a))
+			jQ = jQEven[hilbertIdx].Neg()
 			jQEven[hilbertIdx] = hilbertTempReal
-			jQ += hilbertTempReal
-			jQ -= prevjQEven
-			prevjQEven = b * prevjQInputEven
-			jQ += prevjQEven
+			jI = jI.Add(hilbertTempReal)
+			jI = jI.Sub(prevjIEven)
+			prevjIEven = prevjIInputEven.Mul(zDec.Float64(b))
+			jI = jI.Add(prevjIEven)
+			prevjIInputEven = i1ForEvenPrev3
+			jI = jI.Mul(adjustedPrevPeriod)
+
+			hilbertTempReal = q1.Mul(zDec.Float64(a))
+			jQ = jQEven[hilbertIdx].Neg()
+			jQEven[hilbertIdx] = hilbertTempReal
+			jQ = jQ.Add(hilbertTempReal)
+			jQ = jQ.Sub(prevjQEven)
+			prevjQEven = prevjQInputEven.Mul(zDec.Float64(b))
+			jQ = jQ.Add(prevjQEven)
 			prevjQInputEven = q1
-			jQ *= adjustedPrevPeriod
+			jQ = jI.Mul(adjustedPrevPeriod)
 			hilbertIdx++
 			if hilbertIdx == 3 {
 				hilbertIdx = 0
 			}
-			q2 = (0.2 * (q1 + jI)) + (0.8 * prevq2)
-			i2 = (0.2 * (i1ForEvenPrev3 - jQ)) + (0.8 * previ2)
+			q2 = q1.Add(jI).Mul(zDec.Float64(0.2)).Add(prevq2.Mul(zDec.Float64(0.8)))
+			i2 = i1ForEvenPrev3.Sub(jQ).Mul(zDec.Float64(0.2)).Add(previ2.Add(zDec.Float64(0.8)))
 			i1ForOddPrev3 = i1ForOddPrev2
 			i1ForOddPrev2 = detrender
-			if i1ForEvenPrev3 != 0.0 {
-				tempReal2 = (math.Atan(q1/i1ForEvenPrev3) * rad2Deg)
+			if i1ForEvenPrev3.Cmp(zDec.Float64(0)) != 0 {
+				tempReal2 = q1.Div(i1ForEvenPrev3).Atan().Mul(rad2Deg)
 			} else {
-				tempReal2 = 0.0
+				tempReal2 = zDec.Float64(0.0)
 			}
 		} else {
-
-			hilbertTempReal = a * smoothedValue
-			detrender = -detrenderOdd[hilbertIdx]
+			hilbertTempReal = smoothedValue.Mul(zDec.Float64(a))
+			detrender = detrenderOdd[hilbertIdx].Neg()
 			detrenderOdd[hilbertIdx] = hilbertTempReal
-			detrender += hilbertTempReal
-			detrender -= prevDetrenderOdd
-			prevDetrenderOdd = b * prevDetrenderInputOdd
-			detrender += prevDetrenderOdd
+			detrender = detrender.Add(hilbertTempReal)
+			detrender = detrender.Sub(prevDetrenderOdd)
+			prevDetrenderOdd = prevDetrenderInputOdd.Mul(zDec.Float64(b))
+			detrender = detrender.Add(prevDetrenderOdd)
 			prevDetrenderInputOdd = smoothedValue
-			detrender *= adjustedPrevPeriod
+			detrender = detrender.Mul(adjustedPrevPeriod)
 
-			hilbertTempReal = a * detrender
-			q1 = -q1Odd[hilbertIdx]
+			hilbertTempReal = detrender.Mul(zDec.Float64(a))
+			q1 = q1Odd[hilbertIdx].Neg()
 			q1Odd[hilbertIdx] = hilbertTempReal
-			q1 += hilbertTempReal
-			q1 -= prevq1Odd
-			prevq1Odd = b * prevq1InputOdd
-			q1 += prevq1Odd
+			q1 = q1.Add(hilbertTempReal)
+			q1 = q1.Sub(prevq1Odd)
+			prevq1Odd = prevq1InputOdd.Mul(zDec.Float64(b))
+			q1 = q1.Add(prevq1Odd)
 			prevq1InputOdd = detrender
-			q1 *= adjustedPrevPeriod
+			q1 = q1.Mul(adjustedPrevPeriod)
 
-			hilbertTempReal = a * i1ForOddPrev3
-			jI = -jIOdd[hilbertIdx]
+			hilbertTempReal = i1ForOddPrev3.Mul(zDec.Float64(a))
+			jI = jIOdd[hilbertIdx].Neg()
 			jIOdd[hilbertIdx] = hilbertTempReal
-			jI += hilbertTempReal
-			jI -= prevjIOdd
-			prevjIOdd = b * prevjIInputOdd
-			jI += prevjIOdd
+			jI = jI.Add(hilbertTempReal)
+			jI = jI.Sub(prevjIOdd)
+			prevjIOdd = prevjIInputOdd.Mul(zDec.Float64(b))
+			jI = jI.Add(prevjIOdd)
 			prevjIInputOdd = i1ForOddPrev3
-			jI *= adjustedPrevPeriod
+			jI = jI.Mul(adjustedPrevPeriod)
 
-			hilbertTempReal = a * q1
-			jQ = -jQOdd[hilbertIdx]
+			hilbertTempReal = q1.Mul(zDec.Float64(a))
+			jQ = jQOdd[hilbertIdx].Neg()
 			jQOdd[hilbertIdx] = hilbertTempReal
-			jQ += hilbertTempReal
-			jQ -= prevjQOdd
-			prevjQOdd = b * prevjQInputOdd
-			jQ += prevjQOdd
+			jI = jI.Add(hilbertTempReal)
+			jI = jI.Sub(prevjQOdd)
+			prevjQOdd = prevjQInputOdd.Mul(zDec.Float64(b))
+			jI = jI.Add(prevjQOdd)
 			prevjQInputOdd = q1
-			jQ *= adjustedPrevPeriod
+			jI = jI.Mul(adjustedPrevPeriod)
 
-			q2 = (0.2 * (q1 + jI)) + (0.8 * prevq2)
-			i2 = (0.2 * (i1ForOddPrev3 - jQ)) + (0.8 * previ2)
+			hilbertTempReal = q1.Mul(zDec.Float64(a))
+			jQ = jQOdd[hilbertIdx].Neg()
+			jQOdd[hilbertIdx] = hilbertTempReal
+			jQ = jQ.Add(hilbertTempReal)
+			jQ = jQ.Sub(prevjQOdd)
+			prevjQOdd = prevjQInputOdd.Mul(zDec.Float64(b))
+			jQ = jQ.Add(prevjQOdd)
+			prevjQInputOdd = q1
+			jQ = jI.Mul(adjustedPrevPeriod)
+
+			q2 = q1.Add(jI).Mul(zDec.Float64(0.2)).Add(prevq2.Mul(zDec.Float64(0.8)))
+			i2 = i1ForOddPrev3.Sub(jQ).Mul(zDec.Float64(0.2)).Add(previ2.Add(zDec.Float64(0.8)))
 			i1ForEvenPrev3 = i1ForEvenPrev2
 			i1ForEvenPrev2 = detrender
-			if i1ForOddPrev3 != 0.0 {
-				tempReal2 = (math.Atan(q1/i1ForOddPrev3) * rad2Deg)
+			if i1ForOddPrev3.Cmp(zDec.Float64(0)) != 0 {
+				tempReal2 = q1.Div(i1ForOddPrev3).Atan().Mul(rad2Deg)
 			} else {
-				tempReal2 = 0.0
+				tempReal2 = zDec.Float64(0.0)
 			}
 		}
-		tempReal = prevPhase - tempReal2
+		tempReal = prevPhase.Sub(tempReal2)
 		prevPhase = tempReal2
-		if tempReal < 1.0 {
-			tempReal = 1.0
+		if tempReal.Cmp(zDec.Float64(1)) < 0 {
+			tempReal = zDec.Float64(1)
 		}
-		if tempReal > 1.0 {
-			tempReal = inFastLimit / tempReal
-			if tempReal < inSlowLimit {
-				tempReal = inSlowLimit
+		if tempReal.Cmp(zDec.Float64(1)) > 0 {
+			tempReal = zDec.Float64(inFastLimit).Div(tempReal)
+			if tempReal.Cmp(zDec.Float64(inSlowLimit)) < 0 {
+				tempReal = zDec.Float64(inSlowLimit)
 			}
 		} else {
-			tempReal = inFastLimit
+			tempReal = zDec.Float64(inFastLimit)
 		}
-		mama = (tempReal * todayValue) + ((1 - tempReal) * mama)
-		tempReal *= 0.5
-		fama = (tempReal * mama) + ((1 - tempReal) * fama)
+		mama = tempReal.Mul(todayValue).Add(zDec.Float64(1).Sub(tempReal).Mul(fama))
+		tempReal = tempReal.Mul(zDec.Float64(0.5))
+		fama = tempReal.Mul(mama).Add(zDec.Float64(1).Sub(tempReal).Mul(fama))
 		if today >= startIdx {
 			outMAMA[outIdx] = mama
 			outFAMA[outIdx] = fama
 			outIdx++
 		}
-		Re = (0.2 * ((i2 * previ2) + (q2 * prevq2))) + (0.8 * Re)
-		Im = (0.2 * ((i2 * prevq2) - (q2 * previ2))) + (0.8 * Im)
+		Re = i2.Mul(previ2).Mul(zDec.Float64(0.2)).Add(q2.Mul(prevq2)).Add(Re.Mul(zDec.Float64(0.8)))
+		Im = i2.Mul(prevq2).Mul(zDec.Float64(0.2)).Sub(q2.Mul(previ2)).Add(Im.Mul(zDec.Float64(0.8)))
 		prevq2 = q2
 		previ2 = i2
 		tempReal = period
-		if (Im != 0.0) && (Re != 0.0) {
-			period = 360.0 / (math.Atan(Im/Re) * rad2Deg)
+		if (Im.Cmp(zDec.Float64(0)) != 0) && (Re.Cmp(zDec.Float64(0)) != 0) {
+			period = zDec.Float64(360).Div(Im.Div(Re).Atan().Mul(rad2Deg))
 		}
-		tempReal2 = 1.5 * tempReal
-		if period > tempReal2 {
+		tempReal2 = tempReal.Mul(zDec.Float64(1.5))
+		if period.Cmp(tempReal2) > 0 {
 			period = tempReal2
 		}
-		tempReal2 = 0.67 * tempReal
-		if period < tempReal2 {
+		tempReal2 = tempReal.Mul(zDec.Float64(0.67))
+		if period.Cmp(tempReal2) < 0 {
 			period = tempReal2
 		}
-		if period < 6 {
-			period = 6
-		} else if period > 50 {
-			period = 50
+		if period.Cmp(zDec.Float64(6)) < 0 {
+			period = zDec.Float64(6)
+		} else if period.Cmp(zDec.Float64(50)) > 0 {
+			period = zDec.Float64(50)
 		}
-		period = (0.2 * period) + (0.8 * tempReal)
+		period = period.Mul(zDec.Float64(0.2)).Add(tempReal.Mul(zDec.Float64(0.8)))
 		today++
 	}
 	return outMAMA, outFAMA
 }
 
 // MaVp - Moving average with variable period
-func MaVp(inReal []float64, inPeriods []float64, inMinPeriod int, inMaxPeriod int, inMAType MaType) []float64 {
-	outReal := make([]float64, len(inReal))
+func MaVp(inReal []zDec.Number, inPeriods []float64, inMinPeriod int, inMaxPeriod int, inMAType MaType) []zDec.Number {
+	outReal := make([]zDec.Number, len(inReal))
 	startIdx := inMaxPeriod - 1
 	outputSize := len(inReal)
 
@@ -1142,7 +1166,7 @@ func Sma(inReal []zDec.Number, inTimePeriod int) []zDec.Number {
 	lookbackTotal := inTimePeriod - 1
 	startIdx := lookbackTotal
 	var periodTotal zDec.Number
-	periodTotal = zDec.NewDynNumFromFloat64(0)
+	periodTotal = zDec.Float64(0)
 	trailingIdx := startIdx - lookbackTotal
 	i := trailingIdx
 	if inTimePeriod > 1 {
@@ -1167,8 +1191,8 @@ func Sma(inReal []zDec.Number, inTimePeriod int) []zDec.Number {
 }
 
 // T3 - Triple Exponential Moving Average (T3) (lookback=6*inTimePeriod)
-func T3(inReal []float64, inTimePeriod int, inVFactor float64) []float64 {
-	outReal := make([]float64, len(inReal))
+func T3(inReal []zDec.Number, inTimePeriod int, inVFactor float64) []zDec.Number {
+	outReal := make([]zDec.Number, len(inReal))
 
 	lookbackTotal := 6 * (inTimePeriod - 1)
 	startIdx := lookbackTotal
@@ -1178,80 +1202,81 @@ func T3(inReal []float64, inTimePeriod int, inVFactor float64) []float64 {
 	tempReal := inReal[today]
 	today++
 	for i := inTimePeriod - 1; i > 0; i-- {
-		tempReal += inReal[today]
+		tempReal = tempReal.Add(inReal[today])
 		today++
 	}
-	e1 := tempReal / float64(inTimePeriod)
+	e1 := tempReal.Div(zDec.Float64(inTimePeriod))
 	tempReal = e1
 	for i := inTimePeriod - 1; i > 0; i-- {
-		e1 = (k * inReal[today]) + (oneMinusK * e1)
-		tempReal += e1
+		e1 = inReal[today].Mul(zDec.Float64(k).Add(e1.Mul(zDec.Float64(oneMinusK))))
+		tempReal = tempReal.Add(e1)
 		today++
 	}
-	e2 := tempReal / float64(inTimePeriod)
+	e2 := tempReal.Div(zDec.Float64(inTimePeriod))
 	tempReal = e2
 	for i := inTimePeriod - 1; i > 0; i-- {
-		e1 = (k * inReal[today]) + (oneMinusK * e1)
-		e2 = (k * e1) + (oneMinusK * e2)
-		tempReal += e2
+		e1 = inReal[today].Mul(zDec.Float64(k).Add(e1.Mul(zDec.Float64(oneMinusK))))
+		e2 = e1.Mul(zDec.Float64(k).Add(e2.Mul(zDec.Float64(oneMinusK))))
+		tempReal = tempReal.Add(e2)
 		today++
 	}
-	e3 := tempReal / float64(inTimePeriod)
+	e3 := tempReal.Div(zDec.Float64(inTimePeriod))
 	tempReal = e3
 	for i := inTimePeriod - 1; i > 0; i-- {
-		e1 = (k * inReal[today]) + (oneMinusK * e1)
-		e2 = (k * e1) + (oneMinusK * e2)
-		e3 = (k * e2) + (oneMinusK * e3)
-		tempReal += e3
+		e1 = inReal[today].Mul(zDec.Float64(k).Add(e1.Mul(zDec.Float64(oneMinusK))))
+		e2 = e1.Mul(zDec.Float64(k).Add(e2.Mul(zDec.Float64(oneMinusK))))
+		e3 = e2.Mul(zDec.Float64(k).Add(e3.Mul(zDec.Float64(oneMinusK))))
+		tempReal = tempReal.Add(e3)
 		today++
 	}
-	e4 := tempReal / float64(inTimePeriod)
+	e4 := tempReal.Div(zDec.Float64(inTimePeriod))
 	tempReal = e4
 	for i := inTimePeriod - 1; i > 0; i-- {
-		e1 = (k * inReal[today]) + (oneMinusK * e1)
-		e2 = (k * e1) + (oneMinusK * e2)
-		e3 = (k * e2) + (oneMinusK * e3)
-		e4 = (k * e3) + (oneMinusK * e4)
-		tempReal += e4
+		e1 = inReal[today].Mul(zDec.Float64(k).Add(e1.Mul(zDec.Float64(oneMinusK))))
+		e2 = e1.Mul(zDec.Float64(k).Add(e2.Mul(zDec.Float64(oneMinusK))))
+		e3 = e2.Mul(zDec.Float64(k).Add(e3.Mul(zDec.Float64(oneMinusK))))
+		e4 = e3.Mul(zDec.Float64(k).Add(e4.Mul(zDec.Float64(oneMinusK))))
+		tempReal = tempReal.Add(e4)
 		today++
 	}
-	e5 := tempReal / float64(inTimePeriod)
+	e5 := tempReal.Div(zDec.Float64(inTimePeriod))
 	tempReal = e5
 	for i := inTimePeriod - 1; i > 0; i-- {
-		e1 = (k * inReal[today]) + (oneMinusK * e1)
-		e2 = (k * e1) + (oneMinusK * e2)
-		e3 = (k * e2) + (oneMinusK * e3)
-		e4 = (k * e3) + (oneMinusK * e4)
-		e5 = (k * e4) + (oneMinusK * e5)
-		tempReal += e5
+		e1 = inReal[today].Mul(zDec.Float64(k).Add(e1.Mul(zDec.Float64(oneMinusK))))
+		e2 = e1.Mul(zDec.Float64(k).Add(e2.Mul(zDec.Float64(oneMinusK))))
+		e3 = e2.Mul(zDec.Float64(k).Add(e3.Mul(zDec.Float64(oneMinusK))))
+		e4 = e3.Mul(zDec.Float64(k).Add(e4.Mul(zDec.Float64(oneMinusK))))
+		e5 = e4.Mul(zDec.Float64(k).Add(e5.Mul(zDec.Float64(oneMinusK))))
+		tempReal = tempReal.Add(e5)
 		today++
 	}
-	e6 := tempReal / float64(inTimePeriod)
+	e6 := tempReal.Div(zDec.Float64(inTimePeriod))
 	for today <= startIdx {
-		e1 = (k * inReal[today]) + (oneMinusK * e1)
-		e2 = (k * e1) + (oneMinusK * e2)
-		e3 = (k * e2) + (oneMinusK * e3)
-		e4 = (k * e3) + (oneMinusK * e4)
-		e5 = (k * e4) + (oneMinusK * e5)
-		e6 = (k * e5) + (oneMinusK * e6)
+		e1 = inReal[today].Mul(zDec.Float64(k).Add(e1.Mul(zDec.Float64(oneMinusK))))
+		e2 = e1.Mul(zDec.Float64(k).Add(e2.Mul(zDec.Float64(oneMinusK))))
+		e3 = e2.Mul(zDec.Float64(k).Add(e3.Mul(zDec.Float64(oneMinusK))))
+		e4 = e3.Mul(zDec.Float64(k).Add(e4.Mul(zDec.Float64(oneMinusK))))
+		e5 = e4.Mul(zDec.Float64(k).Add(e5.Mul(zDec.Float64(oneMinusK))))
+		e6 = e5.Mul(zDec.Float64(k).Add(e6.Mul(zDec.Float64(oneMinusK))))
+		tempReal = tempReal.Add(e6)
 		today++
 	}
-	tempReal = inVFactor * inVFactor
-	c1 := -(tempReal * inVFactor)
-	c2 := 3.0 * (tempReal - c1)
-	c3 := -6.0*tempReal - 3.0*(inVFactor-c1)
-	c4 := 1.0 + 3.0*inVFactor - c1 + 3.0*tempReal
+	tempReal = zDec.Float64(inVFactor * inVFactor)
+	c1 := tempReal.Mul(zDec.Float64(inVFactor)).Neg()
+	c2 := tempReal.Sub(c1).Mul(zDec.Float64(3))
+	c3 := tempReal.Mul(zDec.Float64(-6)).Sub(zDec.Float64(inVFactor).Sub(c1).Mul(zDec.Float64(3)))
+	c4 := zDec.Float64(1.0 + 3.0*inVFactor).Sub(c1).Add(tempReal.Mul(zDec.Float64(3)))
 	outIdx := lookbackTotal
-	outReal[outIdx] = c1*e6 + c2*e5 + c3*e4 + c4*e3
+	outReal[outIdx] = c1.Mul(e6).Add(c2.Mul(e5)).Add(c3.Mul(e4)).Add(c4.Mul(e3))
 	outIdx++
 	for today < len(inReal) {
-		e1 = (k * inReal[today]) + (oneMinusK * e1)
-		e2 = (k * e1) + (oneMinusK * e2)
-		e3 = (k * e2) + (oneMinusK * e3)
-		e4 = (k * e3) + (oneMinusK * e4)
-		e5 = (k * e4) + (oneMinusK * e5)
-		e6 = (k * e5) + (oneMinusK * e6)
-		outReal[outIdx] = c1*e6 + c2*e5 + c3*e4 + c4*e3
+		e1 = inReal[today].Mul(zDec.Float64(k).Add(e1.Mul(zDec.Float64(oneMinusK))))
+		e2 = e1.Mul(zDec.Float64(k).Add(e2.Mul(zDec.Float64(oneMinusK))))
+		e3 = e2.Mul(zDec.Float64(k).Add(e3.Mul(zDec.Float64(oneMinusK))))
+		e4 = e3.Mul(zDec.Float64(k).Add(e4.Mul(zDec.Float64(oneMinusK))))
+		e5 = e4.Mul(zDec.Float64(k).Add(e5.Mul(zDec.Float64(oneMinusK))))
+		e6 = e5.Mul(zDec.Float64(k).Add(e6.Mul(zDec.Float64(oneMinusK))))
+		outReal[outIdx] = c1.Mul(e6).Add(c2.Mul(e5)).Add(c3.Mul(e4)).Add(c4.Mul(e3))
 		outIdx++
 		today++
 	}
@@ -1260,8 +1285,8 @@ func T3(inReal []float64, inTimePeriod int, inVFactor float64) []float64 {
 }
 
 // Tema - Triple Exponential Moving Average
-func Tema(inReal []float64, inTimePeriod int) []float64 {
-	outReal := make([]float64, len(inReal))
+func Tema(inReal []zDec.Number, inTimePeriod int) []zDec.Number {
+	outReal := make([]zDec.Number, len(inReal))
 	firstEMA := Ema(inReal, inTimePeriod)
 	secondEMA := Ema(firstEMA[inTimePeriod-1:], inTimePeriod)
 	thirdEMA := Ema(secondEMA[inTimePeriod-1:], inTimePeriod)
@@ -1271,7 +1296,7 @@ func Tema(inReal []float64, inTimePeriod int) []float64 {
 	thirdEMAIdx := inTimePeriod - 1
 
 	for outIdx < len(inReal) {
-		outReal[outIdx] = thirdEMA[thirdEMAIdx] + ((3.0 * firstEMA[outIdx]) - (3.0 * secondEMA[secondEMAIdx]))
+		outReal[outIdx] = thirdEMA[thirdEMAIdx].Add(firstEMA[outIdx].Mul(zDec.Float64(3)).Sub(secondEMA[secondEMAIdx].Mul(zDec.Float64(3))))
 		outIdx++
 		secondEMAIdx++
 		thirdEMAIdx++
@@ -1281,8 +1306,8 @@ func Tema(inReal []float64, inTimePeriod int) []float64 {
 }
 
 // Trima - Triangular Moving Average
-func Trima(inReal []float64, inTimePeriod int) []float64 {
-	outReal := make([]float64, len(inReal))
+func Trima(inReal []zDec.Number, inTimePeriod int) []zDec.Number {
+	outReal := make([]zDec.Number, len(inReal))
 
 	lookbackTotal := inTimePeriod - 1
 	startIdx := lookbackTotal
@@ -1296,88 +1321,88 @@ func Trima(inReal []float64, inTimePeriod int) []float64 {
 		trailingIdx := startIdx - lookbackTotal
 		middleIdx := trailingIdx + i
 		todayIdx := middleIdx + i
-		numerator := 0.0
-		numeratorSub := 0.0
+		var numerator zDec.Number = zDec.Float64(0)
+		var numeratorSub zDec.Number = zDec.Float64(0)
 		for i := middleIdx; i >= trailingIdx; i-- {
 			tempReal := inReal[i]
-			numeratorSub += tempReal
-			numerator += numeratorSub
+			numeratorSub = numeratorSub.Add(tempReal)
+			numerator = numerator.Add(numeratorSub)
 		}
-		numeratorAdd := 0.0
+		var numeratorAdd zDec.Number = zDec.Float64(0)
 		middleIdx++
 		for i := middleIdx; i <= todayIdx; i++ {
 			tempReal := inReal[i]
-			numeratorAdd += tempReal
-			numerator += numeratorAdd
+			numeratorAdd = numeratorAdd.Add(tempReal)
+			numerator = numerator.Add(numeratorAdd)
 		}
 		outIdx = inTimePeriod - 1
 		tempReal := inReal[trailingIdx]
 		trailingIdx++
-		outReal[outIdx] = numerator * factor
+		outReal[outIdx] = numerator.Mul(zDec.Float64(factor))
 		outIdx++
 		todayIdx++
 		for todayIdx < len(inReal) {
-			numerator -= numeratorSub
-			numeratorSub -= tempReal
+			numerator = numerator.Sub(numeratorSub)
+			numeratorSub = numeratorSub.Sub(tempReal)
 			tempReal = inReal[middleIdx]
 			middleIdx++
-			numeratorSub += tempReal
-			numerator += numeratorAdd
-			numeratorAdd -= tempReal
+			numeratorSub = numeratorSub.Add(tempReal)
+			numerator = numerator.Add(numeratorAdd)
+			numeratorAdd = numeratorAdd.Sub(tempReal)
 			tempReal = inReal[todayIdx]
 			todayIdx++
-			numeratorAdd += tempReal
-			numerator += tempReal
+			numeratorAdd = numeratorAdd.Add(tempReal)
+			numerator = numerator.Add(tempReal)
 			tempReal = inReal[trailingIdx]
 			trailingIdx++
-			outReal[outIdx] = numerator * factor
+			outReal[outIdx] = numerator.Mul(zDec.Float64(factor))
 			outIdx++
 		}
 
 	} else {
-
 		i := (inTimePeriod >> 1)
 		factor = float64(i) * (float64(i) + 1)
 		factor = 1.0 / factor
 		trailingIdx := startIdx - lookbackTotal
 		middleIdx := trailingIdx + i - 1
 		todayIdx := middleIdx + i
-		numerator := 0.0
-		numeratorSub := 0.0
+		var numerator zDec.Number = zDec.Float64(0.0)
+		var numeratorSub zDec.Number = zDec.Float64(0.0)
+
 		for i := middleIdx; i >= trailingIdx; i-- {
 			tempReal := inReal[i]
-			numeratorSub += tempReal
-			numerator += numeratorSub
+			numeratorSub = numeratorSub.Add(tempReal)
+			numerator = numerator.Add(numeratorSub)
 		}
-		numeratorAdd := 0.0
+		var numeratorAdd zDec.Number = zDec.Float64(0.0)
 		middleIdx++
 		for i := middleIdx; i <= todayIdx; i++ {
 			tempReal := inReal[i]
-			numeratorAdd += tempReal
-			numerator += numeratorAdd
+			numeratorAdd = numeratorAdd.Add(tempReal)
+			numerator = numerator.Add(numeratorAdd)
 		}
 		outIdx = inTimePeriod - 1
 		tempReal := inReal[trailingIdx]
 		trailingIdx++
-		outReal[outIdx] = numerator * factor
+		outReal[outIdx] = numerator.Mul(zDec.Float64(factor))
 		outIdx++
 		todayIdx++
 
 		for todayIdx < len(inReal) {
-			numerator -= numeratorSub
-			numeratorSub -= tempReal
+			numerator = numerator.Sub(numeratorSub)
+			numeratorSub = numeratorSub.Sub(tempReal)
 			tempReal = inReal[middleIdx]
 			middleIdx++
-			numeratorSub += tempReal
-			numeratorAdd -= tempReal
-			numerator += numeratorAdd
+			numeratorSub = numeratorSub.Add(tempReal)
+			numeratorAdd = numeratorAdd.Sub(tempReal)
+			numerator = numerator.Add(numeratorAdd)
 			tempReal = inReal[todayIdx]
 			todayIdx++
-			numeratorAdd += tempReal
-			numerator += tempReal
+			numeratorAdd = numeratorAdd.Add(tempReal)
+			numerator = numerator.Add(tempReal)
 			tempReal = inReal[trailingIdx]
 			trailingIdx++
-			outReal[outIdx] = numerator * factor
+			outReal[outIdx] = numerator.Mul(zDec.Float64(factor))
 			outIdx++
 		}
 	}
@@ -1385,8 +1410,8 @@ func Trima(inReal []float64, inTimePeriod int) []float64 {
 }
 
 // Wma - Weighted Moving Average
-func Wma(inReal []float64, inTimePeriod int) []float64 {
-	outReal := make([]float64, len(inReal))
+func Wma(inReal []zDec.Number, inTimePeriod int) []zDec.Number {
+	outReal := make([]zDec.Number, len(inReal))
 
 	lookbackTotal := inTimePeriod - 1
 	startIdx := lookbackTotal
@@ -1398,25 +1423,26 @@ func Wma(inReal []float64, inTimePeriod int) []float64 {
 	divider := (inTimePeriod * (inTimePeriod + 1)) >> 1
 	outIdx := inTimePeriod - 1
 	trailingIdx := startIdx - lookbackTotal
-	periodSum, periodSub := 0.0, 0.0
+
+	var periodSum, periodSub zDec.Number = zDec.Float64(0), zDec.Float64(0)
 	inIdx := trailingIdx
 	i := 1
 	for inIdx < startIdx {
 		tempReal := inReal[inIdx]
-		periodSub += tempReal
-		periodSum += tempReal * float64(i)
+		periodSub = periodSub.Add(tempReal)
+		periodSum = periodSum.Add(tempReal.Mul(zDec.Float64(i)))
 		inIdx++
 		i++
 	}
-	trailingValue := 0.0
+	var trailingValue zDec.Number = zDec.Float64(0)
 	for inIdx < len(inReal) {
 		tempReal := inReal[inIdx]
-		periodSub += tempReal
-		periodSub -= trailingValue
-		periodSum += tempReal * float64(inTimePeriod)
+		periodSub = periodSub.Add(tempReal)
+		periodSub = periodSub.Sub(trailingValue)
+		periodSum = periodSum.Add(tempReal.Mul(zDec.Float64(inTimePeriod)))
 		trailingValue = inReal[trailingIdx]
-		outReal[outIdx] = periodSum / float64(divider)
-		periodSum -= periodSub
+		outReal[outIdx] = periodSum.Div(zDec.Float64(divider))
+		periodSum = periodSum.Sub(periodSub)
 		inIdx++
 		trailingIdx++
 		outIdx++
@@ -1427,16 +1453,17 @@ func Wma(inReal []float64, inTimePeriod int) []float64 {
 /* Momentum Indicators */
 
 // Adx - Average Directional Movement Index
-func Adx(inHigh []float64, inLow []float64, inClose []float64, inTimePeriod int) []float64 {
-	outReal := make([]float64, len(inClose))
+func Adx(inHigh []zDec.Number, inLow []zDec.Number, inClose []zDec.Number, inTimePeriod int) []zDec.Number {
+	outReal := make([]zDec.Number, len(inClose))
 
-	inTimePeriodF := float64(inTimePeriod)
+	inTimePeriodF := zDec.Float64(inTimePeriod)
 	lookbackTotal := (2 * inTimePeriod) - 1
 	startIdx := lookbackTotal
 	outIdx := inTimePeriod
-	prevMinusDM := 0.0
-	prevPlusDM := 0.0
-	prevTR := 0.0
+	var prevMinusDM zDec.Number = zDec.Float64(0)
+	var prevPlusDM zDec.Number = zDec.Float64(0)
+	var prevTR zDec.Number = zDec.Float64(0)
+
 	today := startIdx - lookbackTotal
 	prevHigh := inHigh[today]
 	prevLow := inLow[today]
@@ -1444,104 +1471,104 @@ func Adx(inHigh []float64, inLow []float64, inClose []float64, inTimePeriod int)
 	for i := inTimePeriod - 1; i > 0; i-- {
 		today++
 		tempReal := inHigh[today]
-		diffP := tempReal - prevHigh
+		diffP := tempReal.Sub(prevHigh)
 		prevHigh = tempReal
 		tempReal = inLow[today]
-		diffM := prevLow - tempReal
+		diffM := prevLow.Sub(tempReal)
 		prevLow = tempReal
-		if (diffM > 0) && (diffP < diffM) {
-			prevMinusDM += diffM
-		} else if (diffP > 0) && (diffP > diffM) {
-			prevPlusDM += diffP
+		if (diffM.Cmp(zDec.Float64(0)) > 0) && (diffP.Cmp(diffM) < 0) {
+			prevMinusDM = prevMinusDM.Add(diffM)
+		} else if (diffP.Cmp(zDec.Float64(0)) > 0) && (diffP.Cmp(diffM) > 0) {
+			prevPlusDM = prevPlusDM.Add(diffP)
 		}
-		tempReal = prevHigh - prevLow
-		tempReal2 := math.Abs(prevHigh - prevClose)
-		if tempReal2 > tempReal {
+		tempReal = prevHigh.Sub(prevLow)
+		tempReal2 := prevHigh.Sub(prevClose).Abs()
+		if tempReal2.Cmp(tempReal) > 0 {
 			tempReal = tempReal2
 		}
-		tempReal2 = math.Abs(prevLow - prevClose)
-		if tempReal2 > tempReal {
+		tempReal2 = prevLow.Sub(prevClose).Abs()
+		if tempReal2.Cmp(tempReal) > 0 {
 			tempReal = tempReal2
 		}
 
-		prevTR += tempReal
+		prevTR = prevTR.Add(tempReal)
 		prevClose = inClose[today]
 	}
-	sumDX := 0.0
+	var sumDX zDec.Number = zDec.Float64(0)
 	for i := inTimePeriod; i > 0; i-- {
 		today++
 		tempReal := inHigh[today]
-		diffP := tempReal - prevHigh
+		diffP := tempReal.Sub(prevHigh)
 		prevHigh = tempReal
 		tempReal = inLow[today]
-		diffM := prevLow - tempReal
+		diffM := prevLow.Sub(tempReal)
 		prevLow = tempReal
-		prevMinusDM -= prevMinusDM / inTimePeriodF
-		prevPlusDM -= prevPlusDM / inTimePeriodF
-		if (diffM > 0) && (diffP < diffM) {
-			prevMinusDM += diffM
-		} else if (diffP > 0) && (diffP > diffM) {
-			prevPlusDM += diffP
+		prevMinusDM = prevMinusDM.Sub(prevMinusDM.Div(inTimePeriodF))
+		prevPlusDM = prevPlusDM.Sub(prevPlusDM.Div(inTimePeriodF))
+		if (diffM.Cmp(zDec.Float64(0)) > 0) && (diffP.Cmp(diffM) < 0) {
+			prevMinusDM = prevMinusDM.Add(diffM)
+		} else if (diffP.Cmp(zDec.Float64(0)) > 0) && (diffP.Cmp(diffM) > 0) {
+			prevPlusDM = prevPlusDM.Add(diffP)
 		}
-		tempReal = prevHigh - prevLow
-		tempReal2 := math.Abs(prevHigh - prevClose)
-		if tempReal2 > tempReal {
+		tempReal = prevHigh.Sub(prevLow)
+		tempReal2 := prevHigh.Sub(prevClose).Abs()
+		if tempReal2.Cmp(tempReal) > 0 {
 			tempReal = tempReal2
 		}
-		tempReal2 = math.Abs(prevLow - prevClose)
-		if tempReal2 > tempReal {
+		tempReal2 = prevLow.Sub(prevClose).Abs()
+		if tempReal2.Cmp(tempReal) > 0 {
 			tempReal = tempReal2
 		}
 
-		prevTR = prevTR - (prevTR / inTimePeriodF) + tempReal
+		prevTR = prevTR.Sub(prevTR.Div(inTimePeriodF).Add(tempReal))
 		prevClose = inClose[today]
-		if !(((-(0.00000000000001)) < prevTR) && (prevTR < (0.00000000000001))) {
-			minusDI := (100.0 * (prevMinusDM / prevTR))
-			plusDI := (100.0 * (prevPlusDM / prevTR))
-			tempReal = minusDI + plusDI
-			if !(((-(0.00000000000001)) < tempReal) && (tempReal < (0.00000000000001))) {
-				sumDX += (100.0 * (math.Abs(minusDI-plusDI) / tempReal))
+		if !(prevTR.Abs().Cmp(zDec.Float64(0.00000000000001)) < 0) {
+			minusDI := prevMinusDM.Div(prevTR).Mul(zDec.Float64(100))
+			plusDI := prevPlusDM.Div(prevTR).Mul(zDec.Float64(100))
+			tempReal = minusDI.Add(plusDI)
+			if !(tempReal.Abs().Cmp(zDec.Float64(0.00000000000001)) < 0) {
+				sumDX = sumDX.Add(minusDI.Sub(plusDI).Abs().Sub(tempReal).Mul(zDec.Float64(100)))
 			}
 		}
 	}
-	prevADX := (sumDX / inTimePeriodF)
+	prevADX := sumDX.Div(inTimePeriodF)
 
 	outReal[startIdx] = prevADX
 	outIdx = startIdx + 1
 	today++
 	for today < len(inClose) {
 		tempReal := inHigh[today]
-		diffP := tempReal - prevHigh
+		diffP := tempReal.Sub(prevHigh)
 		prevHigh = tempReal
 		tempReal = inLow[today]
-		diffM := prevLow - tempReal
+		diffM := prevLow.Sub(tempReal)
 		prevLow = tempReal
-		prevMinusDM -= prevMinusDM / inTimePeriodF
-		prevPlusDM -= prevPlusDM / inTimePeriodF
-		if (diffM > 0) && (diffP < diffM) {
-			prevMinusDM += diffM
-		} else if (diffP > 0) && (diffP > diffM) {
-			prevPlusDM += diffP
+		prevMinusDM = prevMinusDM.Sub(prevMinusDM.Div(inTimePeriodF))
+		prevPlusDM = prevPlusDM.Sub(prevPlusDM.Div(inTimePeriodF))
+		if (diffM.Cmp(zDec.Float64(0)) > 0) && (diffP.Cmp(diffM) < 0) {
+			prevMinusDM = prevMinusDM.Add(diffM)
+		} else if (diffP.Cmp(zDec.Float64(0)) > 0) && (diffP.Cmp(diffM) > 0) {
+			prevPlusDM = prevPlusDM.Add(diffP)
 		}
-		tempReal = prevHigh - prevLow
-		tempReal2 := math.Abs(prevHigh - prevClose)
-		if tempReal2 > tempReal {
+		tempReal = prevHigh.Sub(prevLow)
+		tempReal2 := prevHigh.Sub(prevClose).Abs()
+		if tempReal2.Cmp(tempReal) > 0 {
 			tempReal = tempReal2
 		}
-		tempReal2 = math.Abs(prevLow - prevClose)
-		if tempReal2 > tempReal {
+		tempReal2 = prevLow.Sub(prevClose).Abs()
+		if tempReal2.Cmp(tempReal) > 0 {
 			tempReal = tempReal2
 		}
 
-		prevTR = prevTR - (prevTR / inTimePeriodF) + tempReal
+		prevTR = prevTR.Sub(prevTR.Div(inTimePeriodF).Add(tempReal))
 		prevClose = inClose[today]
-		if !(((-(0.00000000000001)) < prevTR) && (prevTR < (0.00000000000001))) {
-			minusDI := (100.0 * (prevMinusDM / prevTR))
-			plusDI := (100.0 * (prevPlusDM / prevTR))
-			tempReal = minusDI + plusDI
-			if !(((-(0.00000000000001)) < tempReal) && (tempReal < (0.00000000000001))) {
-				tempReal = (100.0 * (math.Abs(minusDI-plusDI) / tempReal))
-				prevADX = (((prevADX * (inTimePeriodF - 1)) + tempReal) / inTimePeriodF)
+		if !(prevTR.Abs().Cmp(zDec.Float64(0.00000000000001)) < 0) {
+			minusDI := prevMinusDM.Div(prevTR).Mul(zDec.Float64(100))
+			plusDI := prevPlusDM.Div(prevTR).Mul(zDec.Float64(100))
+			tempReal = minusDI.Add(plusDI)
+			if !(tempReal.Abs().Cmp(zDec.Float64(0.00000000000001)) < 0) {
+				tempReal = sumDX.Add(minusDI.Sub(plusDI).Abs().Sub(tempReal).Mul(zDec.Float64(100)))
+				prevADX = prevADX.Mul(inTimePeriodF.Sub(zDec.Float64(1))).Add(tempReal).Div(inTimePeriodF)
 			}
 		}
 		outReal[outIdx] = prevADX
@@ -1552,27 +1579,27 @@ func Adx(inHigh []float64, inLow []float64, inClose []float64, inTimePeriod int)
 }
 
 // AdxR - Average Directional Movement Index Rating
-func AdxR(inHigh []float64, inLow []float64, inClose []float64, inTimePeriod int) []float64 {
-	outReal := make([]float64, len(inClose))
+func AdxR(inHigh []zDec.Number, inLow []zDec.Number, inClose []zDec.Number, inTimePeriod int) []zDec.Number {
+	outReal := make([]zDec.Number, len(inClose))
 	startIdx := (2 * inTimePeriod) - 1
 	tmpadx := Adx(inHigh, inLow, inClose, inTimePeriod)
 	i := startIdx
 	j := startIdx + inTimePeriod - 1
 	for outIdx := startIdx + inTimePeriod - 1; outIdx < len(inClose); outIdx, i, j = outIdx+1, i+1, j+1 {
-		outReal[outIdx] = ((tmpadx[i] + tmpadx[j]) / 2.0)
+		outReal[outIdx] = tmpadx[i].Add(tmpadx[j]).Div(zDec.Float64(2.0))
 	}
 	return outReal
 }
 
 // Apo - Absolute Price Oscillator
-func Apo(inReal []float64, inFastPeriod int, inSlowPeriod int, inMAType MaType) []float64 {
+func Apo(inReal []zDec.Number, inFastPeriod int, inSlowPeriod int, inMAType MaType) []zDec.Number {
 	if inSlowPeriod < inFastPeriod {
 		inSlowPeriod, inFastPeriod = inFastPeriod, inSlowPeriod
 	}
 	tempBuffer := Ma(inReal, inFastPeriod, inMAType)
 	outReal := Ma(inReal, inSlowPeriod, inMAType)
 	for i := inSlowPeriod - 1; i < len(inReal); i++ {
-		outReal[i] = tempBuffer[i] - outReal[i]
+		outReal[i] = tempBuffer[i].Sub(outReal[i])
 	}
 
 	return outReal
@@ -1954,7 +1981,7 @@ func Dx(inHigh []float64, inLow []float64, inClose []float64, inTimePeriod int) 
 
 // Macd - Moving Average Convergence/Divergence
 // unstable period ~= 100
-func Macd(inReal []float64, inFastPeriod int, inSlowPeriod int, inSignalPeriod int) ([]float64, []float64, []float64) {
+func Macd(inReal []zDec.Number, inFastPeriod int, inSlowPeriod int, inSignalPeriod int) ([]zDec.Number, []zDec.Number, []zDec.Number) {
 	if inSlowPeriod < inFastPeriod {
 		inSlowPeriod, inFastPeriod = inFastPeriod, inSlowPeriod
 	}
@@ -1981,18 +2008,18 @@ func Macd(inReal []float64, inFastPeriod int, inSlowPeriod int, inSignalPeriod i
 	fastEMABuffer := ema(inReal, inFastPeriod, k2)
 	slowEMABuffer := ema(inReal, inSlowPeriod, k1)
 	for i := 0; i < len(fastEMABuffer); i++ {
-		fastEMABuffer[i] = fastEMABuffer[i] - slowEMABuffer[i]
+		fastEMABuffer[i] = fastEMABuffer[i].Sub(slowEMABuffer[i])
 	}
 
-	outMACD := make([]float64, len(inReal))
+	outMACD := make([]zDec.Number, len(inReal))
 	for i := lookbackTotal - 1; i < len(fastEMABuffer); i++ {
 		outMACD[i] = fastEMABuffer[i]
 	}
 	outMACDSignal := ema(outMACD, inSignalPeriod, (2.0 / float64(inSignalPeriod+1)))
 
-	outMACDHist := make([]float64, len(inReal))
+	outMACDHist := make([]zDec.Number, len(inReal))
 	for i := lookbackTotal; i < len(outMACDHist); i++ {
-		outMACDHist[i] = outMACD[i] - outMACDSignal[i]
+		outMACDHist[i] = outMACD[i].Sub(outMACDSignal[i])
 	}
 
 	return outMACD, outMACDSignal, outMACDHist
@@ -2000,7 +2027,7 @@ func Macd(inReal []float64, inFastPeriod int, inSlowPeriod int, inSignalPeriod i
 
 // MacdExt - MACD with controllable MA type
 // unstable period ~= 100
-func MacdExt(inReal []float64, inFastPeriod int, inFastMAType MaType, inSlowPeriod int, inSlowMAType MaType, inSignalPeriod int, inSignalMAType MaType) ([]float64, []float64, []float64) {
+func MacdExt(inReal []zDec.Number, inFastPeriod int, inFastMAType MaType, inSlowPeriod int, inSlowMAType MaType, inSignalPeriod int, inSignalMAType MaType) ([]zDec.Number, []zDec.Number, []zDec.Number) {
 	lookbackLargest := 0
 	if inFastPeriod < inSlowPeriod {
 		lookbackLargest = inSlowPeriod
@@ -2009,23 +2036,23 @@ func MacdExt(inReal []float64, inFastPeriod int, inFastMAType MaType, inSlowPeri
 	}
 	lookbackTotal := (inSignalPeriod - 1) + (lookbackLargest - 1)
 
-	outMACD := make([]float64, len(inReal))
-	outMACDSignal := make([]float64, len(inReal))
-	outMACDHist := make([]float64, len(inReal))
+	outMACD := make([]zDec.Number, len(inReal))
+	outMACDSignal := make([]zDec.Number, len(inReal))
+	outMACDHist := make([]zDec.Number, len(inReal))
 
 	slowMABuffer := Ma(inReal, inSlowPeriod, inSlowMAType)
 	fastMABuffer := Ma(inReal, inFastPeriod, inFastMAType)
-	tempBuffer1 := make([]float64, len(inReal))
+	tempBuffer1 := make([]zDec.Number, len(inReal))
 
 	for i := 0; i < len(slowMABuffer); i++ {
-		tempBuffer1[i] = fastMABuffer[i] - slowMABuffer[i]
+		tempBuffer1[i] = fastMABuffer[i].Sub(slowMABuffer[i])
 	}
 	tempBuffer2 := Ma(tempBuffer1, inSignalPeriod, inSignalMAType)
 
 	for i := lookbackTotal; i < len(outMACDHist); i++ {
 		outMACD[i] = tempBuffer1[i]
 		outMACDSignal[i] = tempBuffer2[i]
-		outMACDHist[i] = outMACD[i] - outMACDSignal[i]
+		outMACDHist[i] = outMACD[i].Sub(outMACDSignal[i])
 	}
 
 	return outMACD, outMACDSignal, outMACDHist
@@ -2033,7 +2060,7 @@ func MacdExt(inReal []float64, inFastPeriod int, inFastMAType MaType, inSlowPeri
 
 // MacdFix - MACD Fix 12/26
 // unstable period ~= 100
-func MacdFix(inReal []float64, inSignalPeriod int) ([]float64, []float64, []float64) {
+func MacdFix(inReal []zDec.Number, inSignalPeriod int) ([]zDec.Number, []zDec.Number, []zDec.Number) {
 	return Macd(inReal, 0, 0, inSignalPeriod)
 }
 
@@ -2650,7 +2677,7 @@ func PlusDM(inHigh []float64, inLow []float64, inTimePeriod int) []float64 {
 }
 
 // Ppo - Percentage Price Oscillator
-func Ppo(inReal []float64, inFastPeriod int, inSlowPeriod int, inMAType MaType) []float64 {
+func Ppo(inReal []zDec.Number, inFastPeriod int, inSlowPeriod int, inMAType MaType) []zDec.Number {
 	if inSlowPeriod < inFastPeriod {
 		inSlowPeriod, inFastPeriod = inFastPeriod, inSlowPeriod
 	}
@@ -2659,10 +2686,10 @@ func Ppo(inReal []float64, inFastPeriod int, inSlowPeriod int, inMAType MaType) 
 
 	for i := inSlowPeriod - 1; i < len(inReal); i++ {
 		tempReal := outReal[i]
-		if !(((-(0.00000000000001)) < tempReal) && (tempReal < (0.00000000000001))) {
-			outReal[i] = ((tempBuffer[i] - tempReal) / tempReal) * 100.0
+		if !(tempReal.Abs().Cmp(zDec.Float64(0.00000000000001)) < 0) {
+			outReal[i] = tempBuffer[i].Sub(tempReal).Div(tempReal).Mul(zDec.Float64(100.0))
 		} else {
-			outReal[i] = 0.0
+			outReal[i] = zDec.Float64(0)
 		}
 	}
 
@@ -2697,8 +2724,8 @@ func Rocp(inReal []float64, inTimePeriod int) []float64 {
 }
 
 // Roc - Rate of change : ((price/prevPrice)-1)*100
-func Roc(inReal []float64, inTimePeriod int) []float64 {
-	outReal := make([]float64, len(inReal))
+func Roc(inReal []zDec.Number, inTimePeriod int) []zDec.Number {
+	outReal := make([]zDec.Number, len(inReal))
 
 	startIdx := inTimePeriod
 	outIdx := inTimePeriod
@@ -2707,10 +2734,10 @@ func Roc(inReal []float64, inTimePeriod int) []float64 {
 
 	for inIdx < len(inReal) {
 		tempReal := inReal[trailingIdx]
-		if tempReal != 0.0 {
-			outReal[outIdx] = ((inReal[inIdx] / tempReal) - 1.0) * 100.0
+		if tempReal.Cmp(zDec.Float64(0)) != 0 {
+			outReal[outIdx] = inReal[inIdx].Div(tempReal).Sub(zDec.Float64(1.0).Mul(zDec.Float64(100.0)))
 		} else {
-			outReal[outIdx] = 0.0
+			outReal[outIdx] = zDec.Float64(0.0)
 		}
 		trailingIdx++
 		outIdx++
@@ -2766,86 +2793,84 @@ func Rocr100(inReal []float64, inTimePeriod int) []float64 {
 }
 
 // Rsi - Relative strength index
-func Rsi(inReal []float64, inTimePeriod int) []float64 {
-	outReal := make([]float64, len(inReal))
+func Rsi(inReal []zDec.Number, inTimePeriod int) []zDec.Number {
+	outReal := make([]zDec.Number, len(inReal))
 
 	if inTimePeriod < 2 {
 		return outReal
 	}
 
 	// variable declarations
-	tempValue1 := 0.0
-	tempValue2 := 0.0
+	var tempValue1 zDec.Number = zDec.Float64(0.0)
+	var tempValue2 zDec.Number = zDec.Float64(0.0)
 	outIdx := inTimePeriod
 	today := 0
 	prevValue := inReal[today]
-	prevGain := 0.0
-	prevLoss := 0.0
+	var prevGain zDec.Number = zDec.Float64(0.0)
+	var prevLoss zDec.Number = zDec.Float64(0.0)
 	today++
 
 	for i := inTimePeriod; i > 0; i-- {
 		tempValue1 = inReal[today]
 		today++
-		tempValue2 = tempValue1 - prevValue
+		tempValue2 = tempValue1.Sub(prevValue)
 		prevValue = tempValue1
-		if tempValue2 < 0 {
-			prevLoss -= tempValue2
+		if tempValue2.Cmp(zDec.Float64(0)) < 0 {
+			prevLoss = prevLoss.Sub(tempValue2)
 		} else {
-			prevGain += tempValue2
+			prevGain = prevGain.Add(tempValue2)
 		}
 	}
 
-	prevLoss /= float64(inTimePeriod)
-	prevGain /= float64(inTimePeriod)
+	prevLoss = prevLoss.Div(zDec.Float64(inTimePeriod))
+	prevGain = prevGain.Div(zDec.Float64(inTimePeriod))
 
 	if today > 0 {
-
-		tempValue1 = prevGain + prevLoss
-		if !((-0.00000000000001 < tempValue1) && (tempValue1 < 0.00000000000001)) {
-			outReal[outIdx] = 100.0 * (prevGain / tempValue1)
+		tempValue1 = prevGain.Add(prevLoss)
+		if !(tempValue1.Abs().Cmp(zDec.Float64(0.00000000000001)) < 0) {
+			outReal[outIdx] = prevGain.Div(tempValue1).Mul(zDec.Float64(100))
 		} else {
-			outReal[outIdx] = 0.0
+			outReal[outIdx] = zDec.Float64(0)
 		}
 		outIdx++
 
 	} else {
 		for today < 0 {
 			tempValue1 = inReal[today]
-			tempValue2 = tempValue1 - prevValue
+			tempValue2 = tempValue1.Sub(prevValue)
 			prevValue = tempValue1
-			prevLoss *= float64(inTimePeriod - 1)
-			prevGain *= float64(inTimePeriod - 1)
-			if tempValue2 < 0 {
-				prevLoss -= tempValue2
+			prevLoss = prevLoss.Mul(zDec.Float64(inTimePeriod - 1))
+			prevGain = prevGain.Mul(zDec.Float64(inTimePeriod - 1))
+			if tempValue2.Cmp(zDec.Float64(0)) < 0 {
+				prevLoss = prevLoss.Sub(tempValue2)
 			} else {
-				prevGain += tempValue2
+				prevGain = prevGain.Add(tempValue2)
 			}
-			prevLoss /= float64(inTimePeriod)
-			prevGain /= float64(inTimePeriod)
+			prevLoss = prevLoss.Div(zDec.Float64(inTimePeriod))
+			prevGain = prevGain.Div(zDec.Float64(inTimePeriod))
 			today++
 		}
 	}
 
 	for today < len(inReal) {
-
 		tempValue1 = inReal[today]
 		today++
-		tempValue2 = tempValue1 - prevValue
+		tempValue2 = tempValue1.Sub(prevValue)
 		prevValue = tempValue1
-		prevLoss *= float64(inTimePeriod - 1)
-		prevGain *= float64(inTimePeriod - 1)
-		if tempValue2 < 0 {
-			prevLoss -= tempValue2
+		prevLoss = prevLoss.Mul(zDec.Float64(inTimePeriod - 1))
+		prevGain = prevGain.Mul(zDec.Float64(inTimePeriod - 1))
+		if tempValue2.Cmp(zDec.Float64(0)) < 0 {
+			prevLoss = prevLoss.Sub(tempValue2)
 		} else {
-			prevGain += tempValue2
+			prevGain = prevGain.Add(tempValue2)
 		}
-		prevLoss /= float64(inTimePeriod)
-		prevGain /= float64(inTimePeriod)
-		tempValue1 = prevGain + prevLoss
-		if !((-0.00000000000001 < tempValue1) && (tempValue1 < 0.00000000000001)) {
-			outReal[outIdx] = 100.0 * (prevGain / tempValue1)
+		prevLoss = prevLoss.Div(zDec.Float64(inTimePeriod))
+		prevGain = prevGain.Div(zDec.Float64(inTimePeriod))
+		tempValue1 = prevGain.Add(prevLoss)
+		if !(tempValue1.Abs().Cmp(zDec.Float64(0.00000000000001)) < 0) {
+			outReal[outIdx] = prevGain.Div(tempValue1).Mul(zDec.Float64(100))
 		} else {
-			outReal[outIdx] = 0.0
+			outReal[outIdx] = zDec.Float64(0)
 		}
 		outIdx++
 	}
@@ -2854,9 +2879,9 @@ func Rsi(inReal []float64, inTimePeriod int) []float64 {
 }
 
 // Stoch - Stochastic
-func Stoch(inHigh []float64, inLow []float64, inClose []float64, inFastKPeriod int, inSlowKPeriod int, inSlowKMAType MaType, inSlowDPeriod int, inSlowDMAType MaType) ([]float64, []float64) {
-	outSlowK := make([]float64, len(inClose))
-	outSlowD := make([]float64, len(inClose))
+func Stoch(inHigh []zDec.Number, inLow []zDec.Number, inClose []zDec.Number, inFastKPeriod int, inSlowKPeriod int, inSlowKMAType MaType, inSlowDPeriod int, inSlowDMAType MaType) ([]zDec.Number, []zDec.Number) {
+	outSlowK := make([]zDec.Number, len(inClose))
+	outSlowD := make([]zDec.Number, len(inClose))
 
 	lookbackK := inFastKPeriod - 1
 	lookbackKSlow := inSlowKPeriod - 1
@@ -2867,8 +2892,8 @@ func Stoch(inHigh []float64, inLow []float64, inClose []float64, inFastKPeriod i
 	trailingIdx := startIdx - lookbackTotal
 	today := trailingIdx + lookbackK
 	lowestIdx, highestIdx := -1, -1
-	diff, highest, lowest := 0.0, 0.0, 0.0
-	tempBuffer := make([]float64, len(inClose)-today+1)
+	var diff, highest, lowest zDec.Number = zDec.Float64(0.0), zDec.Float64(0.0), zDec.Float64(0.0)
+	tempBuffer := make([]zDec.Number, len(inClose)-today+1)
 	for today < len(inClose) {
 		tmp := inLow[today]
 		if lowestIdx < trailingIdx {
@@ -2878,17 +2903,17 @@ func Stoch(inHigh []float64, inLow []float64, inClose []float64, inFastKPeriod i
 			for i <= today {
 
 				tmp := inLow[i]
-				if tmp < lowest {
+				if tmp.Cmp(lowest) < 0 {
 					lowestIdx = i
 					lowest = tmp
 				}
 				i++
 			}
-			diff = (highest - lowest) / 100.0
-		} else if tmp <= lowest {
+			diff = highest.Sub(lowest).Div(zDec.Float64(100.0))
+		} else if tmp.Cmp(lowest) <= 0 {
 			lowestIdx = today
 			lowest = tmp
-			diff = (highest - lowest) / 100.0
+			diff = highest.Sub(lowest).Div(zDec.Float64(100.0))
 		}
 		tmp = inHigh[today]
 		if highestIdx < trailingIdx {
@@ -2897,22 +2922,22 @@ func Stoch(inHigh []float64, inLow []float64, inClose []float64, inFastKPeriod i
 			i := highestIdx + 1
 			for i <= today {
 				tmp := inHigh[i]
-				if tmp > highest {
+				if tmp.Cmp(highest) > 0 {
 					highestIdx = i
 					highest = tmp
 				}
 				i++
 			}
-			diff = (highest - lowest) / 100.0
-		} else if tmp >= highest {
+			diff = highest.Sub(lowest).Div(zDec.Float64(100.0))
+		} else if tmp.Cmp(highest) >= 0 {
 			highestIdx = today
 			highest = tmp
-			diff = (highest - lowest) / 100.0
+			diff = highest.Sub(lowest).Div(zDec.Float64(100.0))
 		}
-		if diff != 0.0 {
-			tempBuffer[outIdx] = (inClose[today] - lowest) / diff
+		if diff.Cmp(zDec.Float64(0)) != 0 {
+			tempBuffer[outIdx] = inClose[today].Sub(lowest).Div(diff)
 		} else {
-			tempBuffer[outIdx] = 0.0
+			tempBuffer[outIdx] = zDec.Float64(0.0)
 		}
 		outIdx++
 		trailingIdx++
@@ -2931,9 +2956,9 @@ func Stoch(inHigh []float64, inLow []float64, inClose []float64, inFastKPeriod i
 }
 
 // StochF - Stochastic Fast
-func StochF(inHigh []float64, inLow []float64, inClose []float64, inFastKPeriod int, inFastDPeriod int, inFastDMAType MaType) ([]float64, []float64) {
-	outFastK := make([]float64, len(inClose))
-	outFastD := make([]float64, len(inClose))
+func StochF(inHigh []zDec.Number, inLow []zDec.Number, inClose []zDec.Number, inFastKPeriod int, inFastDPeriod int, inFastDMAType MaType) ([]zDec.Number, []zDec.Number) {
+	outFastK := make([]zDec.Number, len(inClose))
+	outFastD := make([]zDec.Number, len(inClose))
 
 	lookbackK := inFastKPeriod - 1
 	lookbackFastD := inFastDPeriod - 1
@@ -2943,8 +2968,8 @@ func StochF(inHigh []float64, inLow []float64, inClose []float64, inFastKPeriod 
 	trailingIdx := startIdx - lookbackTotal
 	today := trailingIdx + lookbackK
 	lowestIdx, highestIdx := -1, -1
-	diff, highest, lowest := 0.0, 0.0, 0.0
-	tempBuffer := make([]float64, (len(inClose) - today + 1))
+	var diff, highest, lowest zDec.Number = zDec.Float64(0.0), zDec.Float64(0.0), zDec.Float64(0.0)
+	tempBuffer := make([]zDec.Number, (len(inClose) - today + 1))
 
 	for today < len(inClose) {
 		tmp := inLow[today]
@@ -2955,17 +2980,17 @@ func StochF(inHigh []float64, inLow []float64, inClose []float64, inFastKPeriod 
 			i++
 			for i <= today {
 				tmp = inLow[i]
-				if tmp < lowest {
+				if tmp.Cmp(lowest) < 0 {
 					lowestIdx = i
 					lowest = tmp
 				}
 				i++
 			}
-			diff = (highest - lowest) / 100.0
-		} else if tmp <= lowest {
+			diff = highest.Sub(lowest).Div(zDec.Float64(100.0))
+		} else if tmp.Cmp(lowest) <= 0 {
 			lowestIdx = today
 			lowest = tmp
-			diff = (highest - lowest) / 100.0
+			diff = highest.Sub(lowest).Div(zDec.Float64(100.0))
 		}
 		tmp = inHigh[today]
 		if highestIdx < trailingIdx {
@@ -2975,22 +3000,22 @@ func StochF(inHigh []float64, inLow []float64, inClose []float64, inFastKPeriod 
 			i++
 			for i <= today {
 				tmp = inHigh[i]
-				if tmp > highest {
+				if tmp.Cmp(highest) > 0 {
 					highestIdx = i
 					highest = tmp
 				}
 				i++
 			}
-			diff = (highest - lowest) / 100.0
-		} else if tmp >= highest {
+			diff = highest.Sub(lowest).Div(zDec.Float64(100.0))
+		} else if tmp.Cmp(highest) >= 0 {
 			highestIdx = today
 			highest = tmp
-			diff = (highest - lowest) / 100.0
+			diff = highest.Sub(lowest).Div(zDec.Float64(100.0))
 		}
-		if diff != 0.0 {
-			tempBuffer[outIdx] = (inClose[today] - lowest) / diff
+		if diff.Cmp(zDec.Float64(0)) != 0 {
+			tempBuffer[outIdx] = inClose[today].Sub(lowest).Div(diff)
 		} else {
-			tempBuffer[outIdx] = 0.0
+			tempBuffer[outIdx] = zDec.Float64(0.0)
 		}
 		outIdx++
 		trailingIdx++
@@ -3007,9 +3032,9 @@ func StochF(inHigh []float64, inLow []float64, inClose []float64, inFastKPeriod 
 }
 
 // StochRsi - Stochastic Relative Strength Index
-func StochRsi(inReal []float64, inTimePeriod int, inFastKPeriod int, inFastDPeriod int, inFastDMAType MaType) ([]float64, []float64) {
-	outFastK := make([]float64, len(inReal))
-	outFastD := make([]float64, len(inReal))
+func StochRsi(inReal []zDec.Number, inTimePeriod int, inFastKPeriod int, inFastDPeriod int, inFastDMAType MaType) ([]zDec.Number, []zDec.Number) {
+	outFastK := make([]zDec.Number, len(inReal))
+	outFastD := make([]zDec.Number, len(inReal))
 
 	lookbackSTOCHF := (inFastKPeriod - 1) + (inFastDPeriod - 1)
 	lookbackTotal := inTimePeriod + lookbackSTOCHF
@@ -3026,13 +3051,13 @@ func StochRsi(inReal []float64, inTimePeriod int, inFastKPeriod int, inFastDPeri
 }
 
 // Trix - 1-day Rate-Of-Change (ROC) of a Triple Smooth EMA
-func Trix(inReal []float64, inTimePeriod int) []float64 {
+func Trix(inReal []zDec.Number, inTimePeriod int) []zDec.Number {
 	tmpReal := Ema(inReal, inTimePeriod)
 	tmpReal = Ema(tmpReal[inTimePeriod-1:], inTimePeriod)
 	tmpReal = Ema(tmpReal[inTimePeriod-1:], inTimePeriod)
 	tmpReal = Roc(tmpReal, 1)
 
-	outReal := make([]float64, len(inReal))
+	outReal := make([]zDec.Number, len(inReal))
 	for i, j := inTimePeriod, ((inTimePeriod-1)*3)+1; j < len(outReal); i, j = i+1, j+1 {
 		outReal[j] = tmpReal[i]
 	}
@@ -3472,10 +3497,10 @@ func Obv(inReal []float64, inVolume []float64) []float64 {
 /* Volatility Indicators */
 
 // Atr - Average True Range
-func Atr(inHigh []float64, inLow []float64, inClose []float64, inTimePeriod int) []float64 {
-	outReal := make([]float64, len(inClose))
+func Atr(inHigh []zDec.Number, inLow []zDec.Number, inClose []zDec.Number, inTimePeriod int) []zDec.Number {
+	outReal := make([]zDec.Number, len(inClose))
 
-	inTimePeriodF := float64(inTimePeriod)
+	inTimePeriodF := zDec.Float64(inTimePeriod)
 
 	if inTimePeriod < 1 {
 		return outReal
@@ -3494,9 +3519,9 @@ func Atr(inHigh []float64, inLow []float64, inClose []float64, inTimePeriod int)
 	outReal[inTimePeriod] = prevATR
 
 	for outIdx = inTimePeriod + 1; outIdx < len(inClose); outIdx++ {
-		prevATR *= inTimePeriodF - 1.0
-		prevATR += tr[today]
-		prevATR /= inTimePeriodF
+		prevATR = prevATR.Mul(inTimePeriodF.Sub(zDec.Float64(1.0)))
+		prevATR = prevATR.Add(tr[today])
+		prevATR = prevATR.Div(inTimePeriodF)
 		outReal[outIdx] = prevATR
 		today++
 	}
@@ -3505,8 +3530,8 @@ func Atr(inHigh []float64, inLow []float64, inClose []float64, inTimePeriod int)
 }
 
 // Natr - Normalized Average True Range
-func Natr(inHigh []float64, inLow []float64, inClose []float64, inTimePeriod int) []float64 {
-	outReal := make([]float64, len(inClose))
+func Natr(inHigh []zDec.Number, inLow []zDec.Number, inClose []zDec.Number, inTimePeriod int) []zDec.Number {
+	outReal := make([]zDec.Number, len(inClose))
 
 	if inTimePeriod < 1 {
 		return outReal
@@ -3516,7 +3541,7 @@ func Natr(inHigh []float64, inLow []float64, inClose []float64, inTimePeriod int
 		return TRange(inHigh, inLow, inClose)
 	}
 
-	inTimePeriodF := float64(inTimePeriod)
+	inTimePeriodF := zDec.Float64(inTimePeriod)
 	outIdx := inTimePeriod
 	today := inTimePeriod
 
@@ -3525,22 +3550,22 @@ func Natr(inHigh []float64, inLow []float64, inClose []float64, inTimePeriod int
 	prevATR := prevATRTemp[inTimePeriod]
 
 	tempValue := inClose[today]
-	if tempValue != 0.0 {
-		outReal[outIdx] = (prevATR / tempValue) * 100.0
+	if tempValue.Cmp(zDec.Float64(0)) != 0 {
+		outReal[outIdx] = prevATR.Div(tempValue).Mul(zDec.Float64(100))
 	} else {
-		outReal[outIdx] = 0.0
+		outReal[outIdx] = zDec.Float64(0)
 	}
 
 	for outIdx = inTimePeriod + 1; outIdx < len(inClose); outIdx++ {
 		today++
-		prevATR *= inTimePeriodF - 1.0
-		prevATR += tr[today]
-		prevATR /= inTimePeriodF
+		prevATR = prevATR.Mul(inTimePeriodF.Sub(zDec.Float64(1.0)))
+		prevATR = prevATR.Add(tr[today])
+		prevATR = prevATR.Div(inTimePeriodF)
 		tempValue = inClose[today]
-		if tempValue != 0.0 {
-			outReal[outIdx] = (prevATR / tempValue) * 100.0
+		if tempValue.Cmp(zDec.Float64(0)) != 0 {
+			outReal[outIdx] = prevATR.Div(tempValue).Mul(zDec.Float64(100))
 		} else {
-			outReal[0] = 0.0
+			outReal[0] = zDec.Float64(0)
 		}
 	}
 
@@ -3548,8 +3573,8 @@ func Natr(inHigh []float64, inLow []float64, inClose []float64, inTimePeriod int
 }
 
 // TRange - True Range
-func TRange(inHigh []float64, inLow []float64, inClose []float64) []float64 {
-	outReal := make([]float64, len(inClose))
+func TRange(inHigh []zDec.Number, inLow []zDec.Number, inClose []zDec.Number) []zDec.Number {
+	outReal := make([]zDec.Number, len(inClose))
 
 	startIdx := 1
 	outIdx := startIdx
@@ -3558,13 +3583,13 @@ func TRange(inHigh []float64, inLow []float64, inClose []float64) []float64 {
 		tempLT := inLow[today]
 		tempHT := inHigh[today]
 		tempCY := inClose[today-1]
-		greatest := tempHT - tempLT
-		val2 := math.Abs(tempCY - tempHT)
-		if val2 > greatest {
+		greatest := tempHT.Sub(tempLT)
+		val2 := tempCY.Sub(tempHT).Abs()
+		if val2.Cmp(greatest) == 1 {
 			greatest = val2
 		}
-		val3 := math.Abs(tempCY - tempLT)
-		if val3 > greatest {
+		val3 := tempCY.Sub(tempLT).Abs()
+		if val3.Cmp(greatest) == 1 {
 			greatest = val3
 		}
 		outReal[outIdx] = greatest
@@ -5116,10 +5141,10 @@ func LinearRegAngle(inReal []float64, inTimePeriod int) []float64 {
 }
 
 // LinearRegIntercept - Linear Regression Intercept
-func LinearRegIntercept(inReal []float64, inTimePeriod int) []float64 {
-	outReal := make([]float64, len(inReal))
+func LinearRegIntercept(inReal []zDec.Number, inTimePeriod int) []zDec.Number {
+	outReal := make([]zDec.Number, len(inReal))
 
-	inTimePeriodF := float64(inTimePeriod)
+	inTimePeriodF := zDec.Float64(inTimePeriod)
 	lookbackTotal := inTimePeriod
 	startIdx := lookbackTotal
 	outIdx := startIdx - 1
@@ -5128,24 +5153,24 @@ func LinearRegIntercept(inReal []float64, inTimePeriod int) []float64 {
 	sumXSqr := inTimePeriodF * (inTimePeriodF - 1) * (2*inTimePeriodF - 1) / 6
 	divisor := sumX*sumX - inTimePeriodF*sumXSqr
 	// initialize values of sumY and sumXY over first (inTimePeriod) input values
-	sumXY := 0.0
-	sumY := 0.0
+	var sumXY zDec.Number = zDec.Float64(0)
+	var sumY zDec.Number = zDec.Float64(0)
 	i := inTimePeriod
 	for i != 0 {
 		i--
 		tempValue1 := inReal[today-i]
-		sumY += tempValue1
-		sumXY += float64(i) * tempValue1
+		sumY = sumY.Add(tempValue1)
+		sumXY = sumXY.Add(zDec.Float64(float64(i)).Mul(tempValue1))
 	}
 	for today < len(inReal) {
 		// sumX and sumXY are already available for first output value
 		if today > startIdx-1 {
 			tempValue2 := inReal[today-inTimePeriod]
-			sumXY += sumY - inTimePeriodF*tempValue2
-			sumY += inReal[today] - tempValue2
+			sumXY = sumXY.Add(sumY.Sub(inTimePeriodF.Mul(tempValue2)))
+			sumY = sumY.Add(inReal[today].Sub(tempValue2))
 		}
-		m := (inTimePeriodF*sumXY - sumX*sumY) / divisor
-		outReal[outIdx] = (sumY - m*sumX) / inTimePeriodF
+		m := inTimePeriodF.Mul(sumXY).Sub(sumX.Mul(sumY)).Div(divisor)
+		outReal[outIdx] = sumY.Sub(m.Mul(sumX)).Div(inTimePeriodF)
 		outIdx++
 		today++
 	}
@@ -5153,10 +5178,10 @@ func LinearRegIntercept(inReal []float64, inTimePeriod int) []float64 {
 }
 
 // LinearRegSlope - Linear Regression Slope
-func LinearRegSlope(inReal []float64, inTimePeriod int) []float64 {
-	outReal := make([]float64, len(inReal))
+func LinearRegSlope(inReal []zDec.Number, inTimePeriod int) []zDec.Number {
+	outReal := make([]zDec.Number, len(inReal))
 
-	inTimePeriodF := float64(inTimePeriod)
+	inTimePeriodF := zDec.Float64(inTimePeriod)
 	lookbackTotal := inTimePeriod
 	startIdx := lookbackTotal
 	outIdx := startIdx - 1
@@ -5165,23 +5190,23 @@ func LinearRegSlope(inReal []float64, inTimePeriod int) []float64 {
 	sumXSqr := inTimePeriodF * (inTimePeriodF - 1) * (2*inTimePeriodF - 1) / 6
 	divisor := sumX*sumX - inTimePeriodF*sumXSqr
 	// initialize values of sumY and sumXY over first (inTimePeriod) input values
-	sumXY := 0.0
-	sumY := 0.0
+	var sumXY zDec.Number = zDec.Float64(0)
+	var sumY zDec.Number = zDec.Float64(0)
 	i := inTimePeriod
 	for i != 0 {
 		i--
 		tempValue1 := inReal[today-i]
-		sumY += tempValue1
-		sumXY += float64(i) * tempValue1
+		sumY = sumY.Add(tempValue1)
+		sumXY = sumXY.Add(zDec.Float64(float64(i)).Mul(tempValue1))
 	}
 	for today < len(inReal) {
 		// sumX and sumXY are already available for first output value
 		if today > startIdx-1 {
 			tempValue2 := inReal[today-inTimePeriod]
-			sumXY += sumY - inTimePeriodF*tempValue2
-			sumY += inReal[today] - tempValue2
+			sumXY = sumXY.Add(sumY.Sub(inTimePeriodF.Mul(tempValue2)))
+			sumY = sumY.Add(inReal[today].Sub(tempValue2))
 		}
-		outReal[outIdx] = (inTimePeriodF*sumXY - sumX*sumY) / divisor
+		outReal[outIdx] = sumY.Sub(inTimePeriodF.Mul(sumXY).Sub(sumX.Mul(sumY))).Div(divisor)
 		outIdx++
 		today++
 	}
@@ -5195,19 +5220,19 @@ func StdDev(inReal []zDec.Number, inTimePeriod int, inNbDev float64) []zDec.Numb
 	if inNbDev != 1.0 {
 		for i := 0; i < len(inReal); i++ {
 			tempReal := outReal[i]
-			if !(tempReal < 0.00000000000001) {
-				outReal[i] = math.Sqrt(tempReal) * inNbDev
+			if !(tempReal.Cmp(zDec.Float64(0.00000000000001)) < 0) {
+				outReal[i] = tempReal.Pow(zDec.Float64(0.5)).Mul(zDec.Float64(inNbDev))
 			} else {
-				outReal[i] = 0.0
+				outReal[i] = zDec.Float64(0.0)
 			}
 		}
 	} else {
 		for i := 0; i < len(inReal); i++ {
 			tempReal := outReal[i]
-			if !(tempReal < 0.00000000000001) {
-				outReal[i] = math.Sqrt(tempReal)
+			if !(tempReal.Cmp(zDec.Float64(0.00000000000001)) < 0) {
+				outReal[i] = tempReal.Pow(zDec.Float64(0.5))
 			} else {
-				outReal[i] = 0.0
+				outReal[i] = zDec.Float64(0.0)
 			}
 		}
 	}
@@ -5258,8 +5283,8 @@ func Var(inReal []zDec.Number, inTimePeriod int) []zDec.Number {
 
 	nbInitialElementNeeded := inTimePeriod - 1
 	startIdx := nbInitialElementNeeded
-	var periodTotal1 zDec.Number = zDec.NewDynNumFromFloat64(0)
-	var periodTotal2 zDec.Number = zDec.NewDynNumFromFloat64(0)
+	var periodTotal1 zDec.Number = zDec.Float64(0)
+	var periodTotal2 zDec.Number = zDec.Float64(0)
 
 	trailingIdx := startIdx - nbInitialElementNeeded
 	i := trailingIdx
@@ -5794,21 +5819,21 @@ func Sum(inReal []float64, inTimePeriod int) []float64 {
 //	NOTE: The number of Heikin-Ashi candles will always be one less than the number of provided candles, due to the fact
 //	      that a previous candle is necessary to calculate the Heikin-Ashi candle, therefore the first provided candle is not considered
 //	      as "current candle" in the algorithm, but only as "previous candle".
-func HeikinashiCandles(highs []float64, opens []float64, closes []float64, lows []float64) ([]float64, []float64, []float64, []float64) {
+func HeikinashiCandles(highs []zDec.Number, opens []zDec.Number, closes []zDec.Number, lows []zDec.Number) ([]zDec.Number, []zDec.Number, []zDec.Number, []zDec.Number) {
 	N := len(highs)
 
-	heikinHighs := make([]float64, N)
-	heikinOpens := make([]float64, N)
-	heikinCloses := make([]float64, N)
-	heikinLows := make([]float64, N)
+	heikinHighs := make([]zDec.Number, N)
+	heikinOpens := make([]zDec.Number, N)
+	heikinCloses := make([]zDec.Number, N)
+	heikinLows := make([]zDec.Number, N)
 
 	for currentCandle := 1; currentCandle < N; currentCandle++ {
 		previousCandle := currentCandle - 1
 
-		heikinHighs[currentCandle] = math.Max(highs[currentCandle], math.Max(opens[currentCandle], closes[currentCandle]))
-		heikinOpens[currentCandle] = (opens[previousCandle] + closes[previousCandle]) / 2
-		heikinCloses[currentCandle] = (highs[currentCandle] + opens[currentCandle] + closes[currentCandle] + lows[currentCandle]) / 4
-		heikinLows[currentCandle] = math.Min(highs[currentCandle], math.Min(opens[currentCandle], closes[currentCandle]))
+		heikinHighs[currentCandle] = highs[currentCandle].Max(opens[currentCandle], closes[currentCandle])
+		heikinOpens[currentCandle] = opens[previousCandle].Add(closes[previousCandle]).Div(zDec.Float64(2))
+		heikinCloses[currentCandle] = highs[currentCandle].Add(opens[currentCandle]).Add(closes[currentCandle]).Add(lows[currentCandle]).Div(zDec.Float64(4))
+		heikinLows[currentCandle] = highs[currentCandle].Min(opens[currentCandle], closes[currentCandle])
 	}
 
 	return heikinHighs, heikinOpens, heikinCloses, heikinLows
@@ -5818,11 +5843,11 @@ func HeikinashiCandles(highs []float64, opens []float64, closes []float64, lows 
 //
 //	NOTE: Every Hlc item is defined as follows : (high + low + close) / 3
 //	      It is used as AvgPrice candle.
-func Hlc3(highs []float64, lows []float64, closes []float64) []float64 {
+func Hlc3(highs []zDec.Number, lows []zDec.Number, closes []zDec.Number) []zDec.Number {
 	N := len(highs)
-	result := make([]float64, N)
+	result := make([]zDec.Number, N)
 	for i := range highs {
-		result[i] = (highs[i] + lows[i] + closes[i]) / 3
+		result[i] = highs[i].Add(lows[i].Add(closes[i]).Div(zDec.Float64(3)))
 	}
 
 	return result
@@ -5870,7 +5895,7 @@ func Crossunder(series1 []float64, series2 []float64) bool {
 //	To transform 15 minute candles in 1 hour candles you have a grouping factor = 4
 //
 //	To transform 30 minute candles in 1 hour candles you have a grouping factor = 2
-func GroupCandles(highs []float64, opens []float64, closes []float64, lows []float64, groupingFactor int) ([]float64, []float64, []float64, []float64, error) {
+func GroupCandles(highs []zDec.Number, opens []zDec.Number, closes []zDec.Number, lows []zDec.Number, groupingFactor int) ([]zDec.Number, []zDec.Number, []zDec.Number, []zDec.Number, error) {
 	N := len(highs)
 	if groupingFactor == 0 {
 		return nil, nil, nil, nil, errors.New("Grouping factor must be > 0")
@@ -5883,10 +5908,10 @@ func GroupCandles(highs []float64, opens []float64, closes []float64, lows []flo
 
 	groupedN := N / groupingFactor
 
-	groupedHighs := make([]float64, groupedN)
-	groupedOpens := make([]float64, groupedN)
-	groupedCloses := make([]float64, groupedN)
-	groupedLows := make([]float64, groupedN)
+	groupedHighs := make([]zDec.Number, groupedN)
+	groupedOpens := make([]zDec.Number, groupedN)
+	groupedCloses := make([]zDec.Number, groupedN)
+	groupedLows := make([]zDec.Number, groupedN)
 
 	lastOfCurrentGroup := groupingFactor - 1
 
@@ -5900,10 +5925,10 @@ func GroupCandles(highs []float64, opens []float64, closes []float64, lows []flo
 
 		endOfCurrentGroup := i + lastOfCurrentGroup
 		for j := i + 1; j <= endOfCurrentGroup; j++ { // group high lows candles here
-			if lows[j] < groupedLows[k] {
+			if lows[j].Cmp(groupedLows[k]) < 0 {
 				groupedLows[k] = lows[j]
 			}
-			if highs[j] > groupedHighs[k] {
+			if highs[j].Cmp(groupedHighs[k]) > 0 {
 				groupedHighs[k] = highs[j]
 			}
 		}

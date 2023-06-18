@@ -1,6 +1,7 @@
 package zDec
 
 import (
+	"fmt"
 	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/assert"
 	"math"
@@ -348,4 +349,40 @@ func Test_tryPow(t *testing.T) {
 			assert.Equalf(t, tt.wantMov, gotMov, "tryPow(%v, %v)", tt.args.v, tt.args.p)
 		})
 	}
+}
+
+func TestDynNum_Pow(t *testing.T) {
+
+	var a Number
+	a = Float64(0)
+	b := NewDynNumFromFloat64(1)
+	a = a.Add(b)
+	fmt.Printf("%s", a.String())
+	//type args struct {
+	//	n Number
+	//}
+	//tests := []struct {
+	//	name   string
+	//	fields string
+	//	args   args
+	//	want   Number
+	//}{
+	//	{
+	//		name:   "1",
+	//		fields: "2",
+	//		args: args{
+	//			n: Float64(0.5),
+	//		},
+	//		want: nil,
+	//	},
+	//}
+	//for _, tt := range tests {
+	//	t.Run(tt.name, func(t *testing.T) {
+	//		d := mustDynNum(tt.fields)
+	//
+	//		r := d.Pow(tt.args.n)
+	//
+	//		assert.Equalf(t, tt.want, r, "Pow(%v)", tt.args.n)
+	//	})
+	//}
 }

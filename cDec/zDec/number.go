@@ -16,6 +16,12 @@ type Number interface {
 	Mul(number Number) Number
 	Div(number Number) Number
 	Neg() Number
+	Abs() Number
+	Cmp(Number) int // -1 this < param, 0 this = param, 1 this > param
+	Pow(number Number) Number
+	Atan() Number
+	Max(...Number) Number
+	Min(...Number) Number
 	String() string
 }
 
@@ -54,6 +60,10 @@ func shrinkBigInt(v decimal.Decimal) (decimal.Decimal, int) {
 
 type Float64 float64
 
+func (f Float64) Abs() Number {
+	return Float64(math.Abs(float64(f)))
+}
+
 func (f Float64) Add(n Number) Number {
 	switch n.(type) {
 	case DynNum:
@@ -67,6 +77,43 @@ func (f Float64) Add(n Number) Number {
 	}
 	return f
 }
+func (f Float64) Cmp(n Number) int {
+	switch n.(type) {
+	case Float64:
+		if float64(f) == float64(n.(Float64)) {
+			return 0
+		}
+		if float64(f) > float64(n.(Float64)) {
+			return 1
+		}
+		return -1
+	case DynNum:
+		return n.Cmp(f)
+	}
+	panic("invalid type")
+	return 0
+}
+
+func (f Float64) Max(ns ...Number) Number {
+	var max Number = f
+	for _, n := range ns {
+		if max.Cmp(n) < 0 {
+			max = n
+		}
+	}
+	return max
+}
+
+func (f Float64) Min(ns ...Number) Number {
+	var min Number = f
+	for _, n := range ns {
+		if min.Cmp(n) > 0 {
+			min = n
+		}
+	}
+	return min
+}
+
 func (f Float64) Sub(n Number) Number {
 	switch n.(type) {
 	case DynNum:
@@ -100,8 +147,20 @@ func (f Float64) Div(n Number) Number {
 		panic("Float64 type not support")
 	}
 }
+func (f Float64) Pow(n Number) Number {
+	switch n.(type) {
+	case Float64:
+		return Float64(math.Pow(float64(f), float64(n.(Float64))))
+	}
+	panic("invalid type")
+}
+
 func (f Float64) Neg() Number {
 	return -f
+}
+
+func (f Float64) Atan() Number {
+	return Float64(math.Atan(float64(f)))
 }
 
 func (f Float64) String() string {
@@ -120,7 +179,7 @@ type DynNum struct {
 }
 
 const NanoOffset = 9
-const NanoUnit int64 = 10e8
+const NanoUnit int64 = 1e9
 const BoardNanoVal int64 = 4611686018
 
 var NanoBigNum = decimal.NewFromInt(NanoUnit)
@@ -248,11 +307,52 @@ func (d *DynNum) IsNegative() bool {
 	panic("invalid state")
 }
 
-func (d *DynNum) Abs() Number {
+func (d DynNum) Abs() Number {
 	if d.IsNegative() {
 		return d.Neg()
 	}
 	return d
+}
+
+func (d DynNum) Cmp(n Number) int {
+	switch n.(type) {
+	case Float64:
+		v := float64(n.(Float64))
+		if d.state == 0 || d.state == 2 {
+			cmpVal := float64(d.nano)
+			if d.state == 2 {
+				cmpVal = float64(d.atto)
+			}
+			newVal := v * float64(NanoUnit)
+			if d.state == 2 {
+				newVal *= float64(NanoUnit)
+			}
+			if newVal == cmpVal {
+				return 0
+			}
+			if cmpVal < newVal {
+				return -1
+			}
+			return 1
+		}
+		var cmpVal decimal.Decimal
+		if d.state == 1 {
+			cmpVal = d.nanoBigNum.Shift(-NanoOffset)
+		} else {
+			cmpVal = d.attoBigNum.Shift(-2 * NanoOffset)
+		}
+		decV := decimal.NewFromFloat(v)
+		if cmpVal.LessThan(decV) {
+			return -1
+		}
+		if cmpVal.Equal(decV) {
+			return 0
+		}
+		return 1
+	case DynNum:
+		//todo:
+	}
+	return 0
 }
 
 // tryPow only support postive power now
@@ -267,19 +367,25 @@ func tryPow(v, p float64) (r float64, mov int) {
 		mov = 0
 		return
 	}
-
-	//flag := v > 0
-	if math.Round(p)-p < 1.e-3 {
-
+	flag := 1.
+	if math.Round(p)-p < 1.e-9 {
+		if int64(p)%2 == 0 {
+			v = math.Abs(v)
+		} else if v < 0 {
+			flag = -1
+		}
+	} else if v < 0 {
+		panic("neg pow with float invalid")
+		return math.NaN(), 0
 	}
 	if math.Abs(p) > 10 {
 		exp := math.Log10(v) * p
 		mov = int(exp)
-		r = math.Pow(10, exp-float64(mov))
+		r = math.Pow(10, exp-float64(mov)) * flag
 		return
 	}
 	mov = 0
-	unit := 4.
+	unit := 3.
 	for true {
 		r = math.Pow(v, p)
 		if !math.IsInf(r, 0) {
@@ -287,59 +393,57 @@ func tryPow(v, p float64) (r float64, mov int) {
 		}
 		move := unit * p
 		mov += int(move)
-		v = v / 1e4 * math.Pow(10, move-math.Round(move))
+		v = v / 1e3 * math.Pow(10, move-math.Round(move)) * flag
 	}
 	return
 }
 
-//func (d DynNum) Pow(n Number) Number {
-//
-//	r := DynNum{}
-//	switch n.(type) {
-//	case Float64:
-//		f := n.(Float64)
-//		if d.state == 0 || d.state == 2 {
-//			v := d.atto
-//			off := -2 * NanoOffset
-//			if d.state == 0 {
-//				v = d.nano
-//				off = -NanoOffset
-//			}
-//			if float64(f) < 1 {
-//				newOff := float64(off) * float64(f)
-//				digitMov := int64(newOff)
-//				extra := math.Pow(10, newOff-float64(digitMov))
-//				newVal := math.Pow(float64(v), float64(f)) * extra
-//
-//				if uint64(math.MaxInt64/NanoUnit) > absOp(v) {
-//					val := math.Pow(float64(v*NanoUnit), float64(f))
-//					u := 1.
-//					if d.state == 2 {
-//						u = math.Pow(float64(NanoUnit), float64(f))
-//					}
-//					res := val * u
-//					if math.Abs(res) < float64(BoardNanoVal) {
-//						r.atto = int64(math.Round(res * float64(NanoUnit)))
-//						r.state = 2
-//						return r
-//					}
-//					if float64(math.MaxInt64/NanoUnit) > math.Abs(res) {
-//						r.nano = int64(math.Round(res * float64(NanoUnit)))
-//						r.state = 0
-//						return r
-//					}
-//					r.nanoBigNum = decimal.NewFromFloat(res).Shift(NanoOffset)
-//					r.state = 1
-//					return r
-//				} else {
-//
-//				}
-//			}
-//		}
-//
-//	}
-//
-//}
+func (d DynNum) Pow(n Number) Number {
+	r := DynNum{}
+	switch n.(type) {
+	case Float64:
+		f := float64(n.(Float64))
+		base := 0.
+		var exp = 0
+		if d.state == 0 || d.state == 2 {
+			base = float64(d.nano)
+			exp = -NanoOffset * (d.state/2 + 1)
+			if base < float64(NanoUnit) && f < 1 {
+				base *= float64(NanoUnit)
+				exp -= NanoOffset
+			}
+		} else if d.state == 1 || d.state == 3 {
+			bigVal := d.nanoBigNum
+			exp = -NanoOffset * (d.state/2 + 1)
+			for bigVal.Abs().LessThan(NanoBigNum) {
+				bigVal.Shift(-3)
+				exp += 3
+			}
+			base, _ = bigVal.Float64()
+		}
+		basePart, baseMov := tryPow(base, f)
+		expAllMov := float64(exp) * f
+		expMov := int(expAllMov)
+		expFactor := math.Pow(10, expAllMov-float64(expMov))
+		base = basePart * expFactor
+		exp = baseMov + expMov
+		totalExp := int(math.Log10(base)) + exp
+		if totalExp > NanoOffset {
+			r.state = 1
+			r.nanoBigNum = decimal.NewFromFloat(base).Shift(int32(exp + NanoOffset))
+			return r
+		}
+		if totalExp > -3 {
+			r.state = 0
+			r.nano = int64(math.Round(base * math.Pow(10, float64(exp+NanoOffset))))
+			return r
+		}
+		r.state = 2
+		r.atto = int64(math.Round(base * math.Pow(10, float64(exp+2*NanoOffset))))
+		return r
+	}
+	return r
+}
 
 func (d *DynNum) AttoType() DynNum {
 	// transfer to atto unit
@@ -709,6 +813,41 @@ func (d DynNum) Div(n Number) Number {
 		}
 	}
 	return d
+}
+
+func (d DynNum) Atan() Number {
+	var v float64
+	if d.state == 0 {
+		v = float64(d.nano) / float64(NanoUnit)
+	} else if d.state == 1 {
+		v = d.nanoBigNum.Shift(-NanoOffset).InexactFloat64()
+	} else if d.state == 2 {
+		v = float64(d.nano) / float64(NanoUnit) / float64(NanoUnit)
+	} else {
+		v = d.nanoBigNum.Shift(-2 * NanoOffset).InexactFloat64()
+	}
+	d.attoBigNum.Atan()
+	return Float64(math.Atan(v))
+}
+
+func (d DynNum) Max(ns ...Number) Number {
+	var max Number = d
+	for _, n := range ns {
+		if max.Cmp(n) < 0 {
+			max = n
+		}
+	}
+	return max
+}
+
+func (d DynNum) Min(ns ...Number) Number {
+	var min Number = d
+	for _, n := range ns {
+		if min.Cmp(n) > 0 {
+			min = n
+		}
+	}
+	return min
 }
 
 func (d DynNum) String() string {
